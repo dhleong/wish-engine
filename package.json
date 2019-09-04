@@ -1,0 +1,24 @@
+{
+  "name": "wish-engine",
+  "version": "1.0.0",
+  "description": "Wish data source engine v2",
+  "private": true,
+  "devDependencies": {
+    "karma": "^4.2.0",
+    "karma-chrome-launcher": "^3.0.0",
+    "karma-cljs-test": "^0.1.0",
+    "shadow-cljs": "^2.8.46"
+  },
+  "scripts": {
+    "create-build-report": "shadow-cljs run shadow.cljs.build-report app build-report.html && open build-report.html",
+    "build": "shadow-cljs release :engine",
+    "dev": "shadow-cljs start && npm run open && npm run watch",
+    "open": "open $(cat .shadow-cljs/server.stderr.log | sed 's/.*\\(http.*\\)/\\1/' | tail -n 1)",
+    "start": "shadow-cljs start",
+    "stop": "shadow-cljs stop",
+    "watch": "shadow-cljs watch :engine",
+    "test": "shadow-cljs compile ci && karma start --single-run"
+  },
+  "author": "Daniel Leong",
+  "license": "ISC"
+}

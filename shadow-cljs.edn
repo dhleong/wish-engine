@@ -1,0 +1,17 @@
+;; shadow-cljs configuration
+{:dev-http {8080 "public"}
+
+ :source-paths
+ ["engine/src/main"
+  "engine/src/test"]
+
+ :dependencies [[com.rpl/specter "1.1.2"]]
+
+ :builds {:engine {:target :browser
+                   :output-dir "public/js"
+                   :asset-path "/js"
+
+                   :modules {:engine {:entries [wish-engine.core]}}}
+
+          :ci {:target :karma
+               :output-to "target/ci.js"}}}

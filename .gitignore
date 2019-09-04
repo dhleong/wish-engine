@@ -1,0 +1,15 @@
+/*.log
+/target
+/web/target
+/*-init.clj
+/web/public/js
+/web/public/data
+out
+.shadow-cljs
+.nrepl-port
+node_modules
+public/js
+*.pdf
+.cpcache
+build-report.html
+
