@@ -2,16 +2,21 @@
 {:dev-http {8080 "public"}
 
  :source-paths
- ["engine/src/main"
-  "engine/src/test"]
+ ["src/engine/main"
+  "src/engine/test"
+  "src/ci/main"]
 
  :dependencies [[com.rpl/specter "1.1.2"]]
 
  :builds {:engine {:target :browser
                    :output-dir "public/js"
                    :asset-path "/js"
-
                    :modules {:engine {:entries [wish-engine.core]}}}
+
+          :ci-engine {:target :browser
+                      :output-dir "target"
+                      :asset-path "/"
+                      :modules {:ci-engine {:entries [wish-engine.ci]}}}
 
           :ci {:target :karma
                :output-to "target/ci.js"}}}

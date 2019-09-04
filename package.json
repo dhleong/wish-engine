@@ -12,6 +12,7 @@
   "scripts": {
     "create-build-report": "shadow-cljs run shadow.cljs.build-report app build-report.html && open build-report.html",
     "build": "shadow-cljs release :engine",
+    "build:ci": "shadow-cljs release :ci-engine --debug",
     "dev": "shadow-cljs start && npm run open && npm run watch",
     "open": "open $(cat .shadow-cljs/server.stderr.log | sed 's/.*\\(http.*\\)/\\1/' | tail -n 1)",
     "start": "shadow-cljs start",
