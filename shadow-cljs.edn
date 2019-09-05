@@ -12,7 +12,8 @@
  :builds {:engine {:target :browser
                    :output-dir "public/js"
                    :asset-path "/js"
-                   :modules {:engine {:entries [wish-engine.core]}}}
+                   :modules {:engine {:entries [wish-engine.core
+                                                wish-engine.core-test]}}}
 
           :ci-engine {:target :browser
                       :output-dir "target"

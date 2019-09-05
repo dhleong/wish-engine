@@ -7,4 +7,18 @@
 
 (deftest advanced-test
   (testing "Basic math"
-    (is (= 42 (advanced-eval "(+ 20 22)")))))
+    (is (= 42 (advanced-eval "(+ 20 22)"))))
+
+  (testing "Fn compilation"
+    (let [f (advanced-eval "(fn [v]
+                              (+ 20 v))")]
+      (is (ifn? f))
+      (is (= 42 (f 22)))))
+
+  (testing "Cond macro"
+    (let [f (advanced-eval "(fn [v]
+                              (cond
+                                (< v 9001) :serenity
+                                :else :alliance))")]
+      (is (ifn? f))
+      (is (= :serenity (f 42))))))

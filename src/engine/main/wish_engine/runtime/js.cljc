@@ -1,13 +1,13 @@
 (ns wish-engine.runtime.js
   "Macros for exposing fns to template functions"
-  (:require [clojure.string :as str]))
+  (:require [clojure.string :as str]
+            [wish-engine.runtime.config :as config]))
 
 ; NOT exhaustive, but should cover our uses:
-(def reserved?
+(def ^:private reserved?
   #{"if" "let" "for"})
 
-(defn ->js-name
-  [n]
+(defn- ->js-name [n]
   (if (reserved? n)
     (str n "$")
     (str/replace
@@ -28,7 +28,7 @@
 (defmacro expose-fn
   [m fn-symbol & [run-on-args]]
   (let [n (name fn-symbol)
-        this-ns-name (-> (ns-name *ns*)
+        this-ns-name (-> config/runtime-eval-ns
                           name
                           ->js-name)
         exported-name (str "exported-" n)
@@ -65,8 +65,7 @@
          ~export)
       export)))
 
-(defmacro export-sym
-  [sym]
+(defmacro export-sym [sym]
   (let [n (name sym)
         core-ns (if-let [sym-meta (-> sym resolve meta)]
                   (-> sym-meta :ns ns-name name)

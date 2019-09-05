@@ -12,7 +12,8 @@
   "scripts": {
     "create-build-report": "shadow-cljs run shadow.cljs.build-report app build-report.html && open build-report.html",
     "build": "shadow-cljs release :engine",
-    "build:ci": "shadow-cljs release :ci-engine-karma && shadow-cljs release :ci-engine --debug",
+    "build:ci": "npm run build:ci:karma && shadow-cljs release :ci-engine --debug",
+    "build:ci:karma": "shadow-cljs release :ci-engine-karma",
     "dev": "shadow-cljs start && npm run open && npm run watch",
     "open": "open $(cat .shadow-cljs/server.stderr.log | sed 's/.*\\(http.*\\)/\\1/' | tail -n 1)",
     "start": "shadow-cljs start",
@@ -20,7 +21,8 @@
     "watch": "shadow-cljs watch :engine",
     "test": "npm run test:core && npm run test:advanced",
     "test:core": "shadow-cljs compile ci && karma start --single-run",
-    "test:advanced": "npm run build:ci && karma start karma.advanced.conf.js --single-run"
+    "test:advanced": "npm run build:ci && npm run test:advanced:k",
+    "test:advanced:k": "karma start karma.advanced.conf.js --single-run"
   },
   "author": "Daniel Leong",
   "license": "ISC"

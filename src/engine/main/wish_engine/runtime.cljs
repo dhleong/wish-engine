@@ -5,36 +5,13 @@
             [cljs.reader :as edn]
             [cljs.js :refer [empty-state eval js-eval]]
             [wish-engine.model :refer [WishEngine]]
-            [wish-engine.runtime.js :refer-macros [expose-fn export-macro export-sym]])
-  )
+            [wish-engine.runtime.config :as config]
+            [wish-engine.runtime-eval :refer [exposed-fns]]))
 
 
 ; ======= Consts ==========================================
 
-(def ^:private runtime-eval-ns 'wish-engine.runtime-eval)
-(def ^:private runtime-export-ns 'wish-engine.runtime)
-
-
-; ======= Public API ======================================
-
-(defn ^:export ordinal [n]
-  (str n
-       (if (<= 11 n 19)
-         "th"
-         (let [ones (rem n 10)]
-           (case ones
-             1 "st"
-             2 "nd"
-             3 "rd"
-             "th")))))
-
-(defn ^:export has?
-  "Alias for (some) that can handle sets in production"
-  [vals-set coll]
-  (some
-    (fn [item]
-      (contains? vals-set item))
-    coll))
+(def ^:private nil-symbol (symbol "nil"))
 
 
 
@@ -42,116 +19,15 @@
 
 ;;; helper fns
 
-(defn ^:export ->number
-  [to-coerce]
-  (when to-coerce
-    (cond
-      (number? to-coerce) to-coerce
-      (not= -1 (.indexOf to-coerce ".")) (js/parseFloat to-coerce)
-      :else (js/parseInt to-coerce))))
-
-(defn ^:export mathify
-  [args]
-  (map ->number args))
-
 (defn- exported-fqn [name-sym]
-  (symbol runtime-export-ns name-sym))
+  (symbol config/runtime-export-ns name-sym))
 
-(def exposed-fns
-  (-> { ; these alias directly to JS functions
-       'ceil 'js/Math.ceil
-       'floor 'js/Math.floor
-
-       'has? (exported-fqn 'has?)
-       'ordinal (exported-fqn 'ordinal)}
-
-      ;;
-      ;; Expose!
-      ;;
-
-      (expose-fn + mathify)
-      (expose-fn - mathify)
-      (expose-fn / mathify)
-      (expose-fn * mathify)
-      (expose-fn <)
-      (expose-fn >)
-      (expose-fn <=)
-      (expose-fn >=)
-      (expose-fn =)
-      (expose-fn not=)
-      (expose-fn not)
-      (expose-fn min)
-      (expose-fn max)
-
-      (expose-fn inc)
-      (expose-fn dec)
-
-      (expose-fn keyword)
-      (expose-fn namespace)
-      (expose-fn name)
-      (expose-fn str)
-      (expose-fn symbol)
-      (expose-fn vector)
-
-      (expose-fn concat)
-      (expose-fn cons)
-      (expose-fn contains?)
-      (expose-fn count)
-      (expose-fn identity)
-      (expose-fn keys)
-      (expose-fn vals)
-      (expose-fn vec)
-
-      (expose-fn get)
-      (expose-fn get-in)
-
-      (expose-fn comp)
-      (expose-fn filter)
-      (expose-fn keep)
-      (expose-fn map)
-      (expose-fn mapcat)
-      (expose-fn remove)
-      (expose-fn some)
-
-      (expose-fn partial)
-
-      ; for debugging
-      (expose-fn println)))
-
-(when-not js/goog.DEBUG
-  (export-macro ->)
-  (export-macro ->>)
-  (export-macro as->)
-  (export-macro cond)
-  (export-macro cond->)
-  (export-macro cond->>)
-  (export-macro if-let)
-  (export-macro if-not)
-  (export-macro if-some)
-  (export-macro some->)
-  (export-macro some->>)
-  (export-macro when)
-  (export-macro when-first)
-  (export-macro when-let)
-  (export-macro when-not)
-  (export-macro when-some)
-
-  ; this is required for (cond)
-  (export-sym cljs.core/truth_)
-
-  (export-sym cljs.core/Symbol)
-  (export-sym cljs.core/Keyword)
-  (export-sym cljs.core/PersistentArrayMap)
-  (export-sym cljs.core/PersistentHashMap)
-  (export-sym cljs.core/PersistentHashSet)
-  (export-sym cljs.core/PersistentVector))
 
 ;;; code rewriting for compilation
 
 (declare ->compilable)
 
-(defn- ->and
-  [items]
+(defn- ->and [items]
   ; a && b  ==  ! (!a || !b)
   ; this is not strictly correct; (and) returns the last value,
   ; or the last false-y value if any, but we *probably* don't
@@ -164,8 +40,7 @@
                      (mapcat (fn [item]
                                [(list exported-not item) true])))))))
 
-(defn- ->or
-  [items]
+(defn- ->or [items]
   ; NOTE this isn't super efficient if the args are not just
   ; variables, but I don't expect too much complicated use of
   ; (or); if it gets to that, we can just reimplement 'or
@@ -184,19 +59,16 @@
   (concat (list (exported-fqn 'exported-get) m kw)
           args))
 
-(defn- ->has?
-  [args]
+(defn- ->has?  [args]
   (cons (exported-fqn 'has?)
         args))
 
-(defn- ->special-form
-  [sym]
+(defn- ->special-form [sym]
   (get
     {'let 'let*
      'fn 'fn*}
     sym))
 
-(def ^:private nil-symbol (symbol "nil"))
 (defn- ->compilable
   "Given a raw symbol/expr, return something that we
    can actually compile"
@@ -240,7 +112,7 @@
         "$1.call(null,")))
 
 
-; ======= evaluation ======================================
+; ======= Evaluation ======================================
 
 (defn- eval-in [state form]
   (eval state
@@ -248,6 +120,7 @@
         {:eval (fn [src]
                  (let [src (update src :source process-source)]
                    (try
+                     (js/console.warn "EVAL" (:source src))
                      (js-eval src)
                      (catch :default e
                        (js/console.warn (str "FAILED to js/eval:\n\n"
@@ -259,7 +132,7 @@
                                      "\n\nOriginal error: " (.-stack e))))))))
 
          :context :expr
-         :ns runtime-eval-ns}
+         :ns config/runtime-eval-ns}
         (fn [res]
           (if (contains? res :value) ; nil or false are fine
             (:value res)
@@ -277,7 +150,7 @@
     (eval-in
       new-state
       (list
-        'ns runtime-eval-ns
+        'ns config/runtime-eval-ns
         '(:require [wish-engine.runtime])))
 
     new-state))
@@ -305,11 +178,14 @@
               (js/console.error "Cause3: " (.-stack cause3)))))
         (throw e)))))
 
+
+; ======= Public interface ================================
+
 (deftype JSWishEngine [eval-state]
   WishEngine
   (create-state [this] {})
   (parse-string [this s]
-    (edn/read-string (str "(do " s ")")))
+    (edn/read-string s #_(str "(do " s ")")))
   (eval-source-form [this state form]
     (eval-form this form)))
 
