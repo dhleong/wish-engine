@@ -1,4 +1,6 @@
-(ns wish-engine.ci
+(ns wish-test-helper.engine
+  "This namespace needs to be distinct so it doesn't get overwritten
+   by the wish_engine definition from the karma test file"
   (:require [wish-engine.core :refer [create-engine]]
             [wish-engine.model :as engine]))
 

@@ -4,7 +4,8 @@
  :source-paths
  ["src/engine/main"
   "src/engine/test"
-  "src/ci/main"]
+  "src/ci/main"
+  "src/ci/test"]
 
  :dependencies [[com.rpl/specter "1.1.2"]]
 
@@ -16,7 +17,12 @@
           :ci-engine {:target :browser
                       :output-dir "target"
                       :asset-path "/"
-                      :modules {:ci-engine {:entries [wish-engine.ci]}}}
+                      :modules {:ci-engine {:entries [wish-test-helper.engine]}}}
+
+          :ci-engine-karma {:target :karma
+                            :ns-regexp "wish-test\\..*-test$"
+                            :output-to "target/ci-engine-karma.js"}
 
           :ci {:target :karma
+               :ns-regexp "wish-engine\\..*-test$"
                :output-to "target/ci.js"}}}
