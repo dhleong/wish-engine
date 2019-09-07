@@ -77,6 +77,7 @@
 (export-fn mapcat)
 (export-fn remove)
 (export-fn some)
+(export-fn seq)
 
 (export-fn partial)
 
@@ -117,27 +118,42 @@
           (let* [~form tmp#]
             ~then))))))
 
+(defn- thread-with [threader]
+  (fn thread-with-fn [x & forms]
+    (loop [x x, forms forms]
+      (if forms
+        (let [form (first forms)
+              threaded (if (seq? form)
+                         (threader x form)
+                         (list form x))]
+          (recur threaded (next forms)))
+        x))))
+
+(def ^:private thread-> (thread-with
+                          (fn [x form]
+                            `(~(first form) ~x ~@(next form)))))
+
+(def ^:private thread->> (thread-with
+                           (fn [x form]
+                             `(~(first form) ~@(next form) ~x))))
+
+(defn- thread-some-with [threader]
+  (fn thread-some-fn [expr & forms]
+    (let [g (gensym)
+          steps (map (fn [step] `(if (wish-engine.runtime-eval/exported-nil? ~g)
+                                   nil
+                                   ~(threader g step)))
+                     forms)]
+      `(let* [~g ~expr
+              ~@(interleave (repeat g) (butlast steps))]
+         ~(if (empty? steps)
+            g
+            (last steps))))))
+
 ; most of this is borrowed from clojure.core
 (def exported-macros
-  {'-> (fn [x & forms]
-         (loop [x x, forms forms]
-           (if forms
-             (let [form (first forms)
-                   threaded (if (seq? form)
-                              `(~(first form) ~x ~@(next form))
-                              (list form x))]
-               (recur threaded (next forms)))
-             x)))
-
-   '->> (fn [x & forms]
-          (loop [x x, forms forms]
-            (if forms
-              (let [form (first forms)
-                    threaded (if (seq? form)
-                               `(~(first form) ~@(next form) ~x)
-                               (list form x))]
-                (recur threaded (next forms)))
-              x)))
+  {'-> thread->
+   '->> thread->>
 
    'as-> (fn [expr n & forms]
            `(let* [~n ~expr
@@ -163,8 +179,8 @@
 
    'if-some process-if-some
 
-   ;; (export-macro some->)
-   ;; (export-macro some->>)
+   'some-> (thread-some-with thread->)
+   'some->> (thread-some-with thread->>)
 
    'when (fn [condition & body]
            `(if ~condition (do ~@body)))

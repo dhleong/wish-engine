@@ -72,6 +72,30 @@
                                "true"
                                "nil"))))))
 
+(deftest some-forms-test
+  (testing "some->"
+    (is (= 42 (eval-form '(some-> {:a {:b {:c 42}}}
+                                  :a
+                                  :b
+                                  :c))))
+    (is (= 42 (eval-form '(some-> {"a" {"b" {"c" 42}}}
+                                  (get "a")
+                                  (get "b")
+                                  (get "c")))))
+    (is (nil? (eval-form '(some-> {"a" {"b" {"c" 42}}}
+                                  (get "a")
+                                  (get "missing"))))))
+
+  (testing "some->>"
+    (is (= ["key:a" "key:b" "key:c"]
+           (eval-form '(some->> [:a :b :c]
+                                (map str)
+                                (map #(str "key" %))))))
+    (is (nil? (eval-form '(some->> [:a :b :c]
+                                   (filter nil?)
+                                   seq
+                                   (throw)))))))
+
 (deftest when-forms-test
   (testing "when"
     (is (= 42 (eval-form '(when true 42))))
