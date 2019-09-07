@@ -168,10 +168,10 @@
   ;; (export-macro some->>)
 
    'when (fn [condition & body]
-           `(if ~condition ~@body))
+           `(if ~condition (do ~@body)))
 
    'when-let (fn [bindings & body]
-               (process-if-let bindings body))
+               (process-if-let bindings `(do ~@body)))
 
   ;; (export-macro when-first)
   ;; (export-macro when-not)

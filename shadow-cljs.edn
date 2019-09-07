@@ -15,10 +15,6 @@
                    :modules {:engine {:entries [wish-engine.core
                                                 wish-engine.core-test]}}}
 
-          ;; :bootstrap {:target :bootstrap
-          ;;             :output-dir "public/js/bootstrap"
-          ;;             :entries [wish-engine.runtime-eval]}
-
           :ci-engine {:target :browser
                       :output-dir "target"
                       :asset-path "/"

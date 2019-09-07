@@ -64,3 +64,12 @@
                                 "false"
                                 "true"))))))
 
+(deftest when-forms-test
+  (testing "when"
+    (is (= 42 (eval-form '(when true 42))))
+    (is (nil? (eval-form '(when false 42)))))
+
+  (testing "when-let"
+    (is (= 42 (eval-form '(when-let [a 42]
+                            (* a 2)
+                            a))))))
