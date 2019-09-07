@@ -5,7 +5,12 @@
 (deftest basic-test
   (testing "let"
     (is (= 42 (eval-form '(let [n 21]
-                            (* 2 n)))))))
+                            (* 2 n))))))
+  (testing "if"
+    (is (= true (eval-form '(if true
+                              true))))
+    (is (nil? (eval-form '(if false
+                            true))))))
 
 ;;;
 ;;; Macro expansion
@@ -71,6 +76,20 @@
     (is (= "nil" (eval-form '(if-some [a nil]
                                "true"
                                "nil"))))))
+
+(deftest bool-forms
+  (testing "and"
+    (is (= 9001 (eval-form '(and true
+                               42
+                               9001))))
+    (is (nil? (eval-form '(and nil))))
+    (is (false? (eval-form '(and true false)))))
+
+  (testing "or"
+    (is (= 42 (eval-form '(or (when false 22)
+                              (if-not true 32)
+                              42))))
+    (is (nil? (eval-form '(or false))))))
 
 (deftest some-forms-test
   (testing "some->"

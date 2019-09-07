@@ -21,29 +21,6 @@
 
 (declare ->compilable)
 
-(defn- ->and [items]
-  ; a && b  ==  ! (!a || !b)
-  ; this is not strictly correct; (and) returns the last value,
-  ; or the last false-y value if any, but we *probably* don't
-  ; need to do that. If we do, then we can reimpliment like
-  ; the builtin recursive macro
-  (let [exported-not (->compilable 'not)]
-    (list exported-not
-          (cons 'cond
-                (->> items
-                     (mapcat (fn [item]
-                               [(list exported-not item) true])))))))
-
-(defn- ->or [items]
-  ; NOTE this isn't super efficient if the args are not just
-  ; variables, but I don't expect too much complicated use of
-  ; (or); if it gets to that, we can just reimplement 'or
-  ; recursively, like the macro does
-  (cons 'cond
-        (->> items
-             (mapcat (fn [item]
-                       [item item])))))
-
 (defn- ->kw-get
   "Under advanced compilation, the function names to invoke
    a keyword as a function have been munged and are unavailable.
@@ -86,16 +63,12 @@
                          (apply ->kw-get sym)
 
                          (condp = fn-call
-                           'or (->or (rest sym))
-                           'and (->and (rest sym))
-                           'when ()
-
                            'wish-engine.runtime/exported-some
                            (when (set? (second sym))
                              (->has? (rest sym)))
 
-                           ; otherwise, leave it alone
-                           sym))))
+                           ; else, fall through:
+                           nil))))
 
                    ; just return unchanged
                    sym)]

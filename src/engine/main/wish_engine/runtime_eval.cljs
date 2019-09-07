@@ -92,6 +92,24 @@
   (export-sym cljs.core/PersistentHashSet)
   (export-sym cljs.core/PersistentVector))
 
+(defn- process-and
+  ([] true)
+  ([x] x)
+  ([x & others]
+   `(let* [and# ~x]
+      (if and#
+        ~(apply process-and others)
+        and#))))
+
+(defn- process-or
+  ([] nil)
+  ([x] x)
+  ([x & others]
+   `(let* [or# ~x]
+      (if or#
+        or#
+        ~(apply process-or others)))))
+
 (defn- process-if-let
   ([bindings then] (process-if-let bindings then nil))
   ([bindings then else]
@@ -157,6 +175,9 @@
               ~(if (empty? forms)
                  n
                  (last forms))))
+
+   'and process-and
+   'or process-or
 
    'cond (fn process-cond [& clauses]
            (when clauses
