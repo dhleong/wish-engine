@@ -1,5 +1,6 @@
 (ns wish-engine.runtime-eval
-  (:require [wish-engine.scripting-api :as api])
+  (:require [wish-engine.runtime.config :as config]
+            [wish-engine.scripting-api :as api])
   (:require-macros [wish-engine.runtime.js :refer [export-fn export-sym]]))
 
 
@@ -62,6 +63,8 @@
 
 (export-fn get)
 (export-fn get-in)
+(export-fn first)
+(export-fn next)
 
 (export-fn comp)
 (export-fn filter)
@@ -106,7 +109,7 @@
    (let [form (bindings 0)
          value (bindings 1)]
      `(let* [tmp# ~value]
-        (if (wish-engine.runtime-eval/exported-nil? tmp#)
+        (if (~(config/exported-fqn 'nil?) tmp#)
           ~else
           (let* [~form tmp#]
             ~then))))))
@@ -133,7 +136,7 @@
 (defn- thread-some-with [threader]
   (fn thread-some-fn [expr & forms]
     (let [g (gensym)
-          steps (map (fn [step] `(if (wish-engine.runtime-eval/exported-nil? ~g)
+          steps (map (fn [step] `(if (~(config/exported-fqn 'nil?) ~g)
                                    nil
                                    ~(threader g step)))
                      forms)]
@@ -167,7 +170,7 @@
    'if-let process-if-let
 
    'if-not (fn [condition & body]
-             `(if (not ~condition)
+             `(if (~(config/exported-fqn 'not) ~condition)
                 ~@body))
 
    'if-some process-if-some
@@ -184,12 +187,13 @@
    'when-first (fn [bindings & body]
                  (let [[x xs] bindings
                        xs-var (gensym "xs")]
-                   (process-if-let [xs-var `(seq ~xs)]
-                                   `(let* [~x (first ~xs-var)]
+                   (process-if-let [xs-var (list (config/exported-fqn 'seq)
+                                                 xs)]
+                                   `(let* [~x (~(config/exported-fqn 'first) ~xs-var)]
                                       ~@body))))
 
    'when-not (fn [condition & body]
-               `(if (not ~condition)
+               `(if (~(config/exported-fqn 'not) ~condition)
                   (do ~@body)))
 
    'when-some (fn [bindings & body]

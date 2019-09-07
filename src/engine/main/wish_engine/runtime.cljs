@@ -17,12 +17,6 @@
 
 ; ======= export fns/vars/macros for use ==================
 
-;;; helper fns
-
-(defn- exported-fqn [name-sym]
-  (symbol config/runtime-export-ns name-sym))
-
-
 ;;; code rewriting for compilation
 
 (declare ->compilable)
@@ -56,11 +50,11 @@
    We could force people to use (get), but it's nicer to just
    rewrite it that way ourselves."
   [kw m & args]
-  (concat (list (exported-fqn 'exported-get) m kw)
+  (concat (list (config/exported-fqn 'get) m kw)
           args))
 
 (defn- ->has?  [args]
-  (cons (exported-fqn 'has?)
+  (cons (config/with-exported-ns 'has?)
         args))
 
 (defn- ->special-form [sym]
@@ -131,6 +125,7 @@
   (cljs/eval state
         form
         {:eval (fn [src]
+                 (js/console.warn "process..." (:source src))
                  (let [src (update src :source process-source)]
                    (try
                      (js/console.warn "EVAL" (:source src))
@@ -172,6 +167,7 @@
   (let [cleaned-form (clean-form form)]
 
     (try
+      (js/console.info "eval-form" (str form))
       (no-warn
         (eval-in @(.-eval-state engine)
                  cleaned-form))
