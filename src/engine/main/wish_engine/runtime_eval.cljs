@@ -110,3 +110,72 @@
   (export-sym cljs.core/PersistentHashMap)
   (export-sym cljs.core/PersistentHashSet)
   (export-sym cljs.core/PersistentVector))
+
+(defn- process-if-let [bindings then & [else]]
+  (let [form (bindings 0)
+        value (bindings 1)]
+    `(let* [tmp# ~value]
+       (if tmp#
+         (let* [~form tmp#]
+           ~then)
+         ~else))))
+
+; most of this is borrowed from clojure.core
+(def exported-macros
+  {'-> (fn [x & forms]
+         (loop [x x, forms forms]
+           (if forms
+             (let [form (first forms)
+                   threaded (if (seq? form)
+                              `(~(first form) ~x ~@(next form))
+                              (list form x))]
+               (recur threaded (next forms)))
+             x)))
+   '->> (fn [x & forms]
+          (loop [x x, forms forms]
+            (if forms
+              (let [form (first forms)
+                    threaded (if (seq? form)
+                               `(~(first form) ~@(next form) ~x)
+                               (list form x))]
+                (recur threaded (next forms)))
+              x)))
+
+   'as-> (fn [expr n & forms]
+           `(let* [~n ~expr
+                   ~@(interleave (repeat n) (butlast forms))]
+              ~(if (empty? forms)
+                 n
+                 (last forms))))
+
+   'cond (fn process-cond [& clauses]
+           (when clauses
+             (list 'if (first clauses)
+                   (if (next clauses)
+                     (second clauses)
+                     (throw (js/Error.
+                              "cond requires an even number of forms")))
+                   (apply process-cond (nnext clauses)))))
+
+   'if-let process-if-let
+
+   'if-not (fn [condition & body]
+             `(if (not ~condition)
+                ~@body))
+
+  ;; (export-macro if-some)
+  ;; (export-macro some->)
+  ;; (export-macro some->>)
+
+   'when (fn [condition & body]
+           `(if ~condition ~@body))
+
+   'when-let (fn [bindings & body]
+               (process-if-let bindings body))
+
+  ;; (export-macro when-first)
+  ;; (export-macro when-not)
+  ;; (export-macro when-some)
+
+   })
+

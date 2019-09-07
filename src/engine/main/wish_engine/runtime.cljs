@@ -6,7 +6,7 @@
             [cljs.js :as cljs :refer [empty-state js-eval]]
             [wish-engine.model :refer [WishEngine]]
             [wish-engine.runtime.config :as config]
-            [wish-engine.runtime-eval :refer [exported-fns]]))
+            [wish-engine.runtime-eval :refer [exported-fns exported-macros]]))
 
 
 ; ======= Consts ==========================================
@@ -80,6 +80,10 @@
                               (= "js" (namespace sym)))
                      nil-symbol)
 
+                   (when (and (list? sym) (symbol? (first sym)))
+                     (when-let [macro (get exported-macros (first sym))]
+                       (apply macro (rest sym))))
+
                    ; (or) and (and) don't play nicely for some reason,
                    ; so we convert them into something that works
                    (when (list? sym)
@@ -90,6 +94,7 @@
                          (condp = fn-call
                            'or (->or (rest sym))
                            'and (->and (rest sym))
+                           'when ()
 
                            'wish-engine.runtime/exported-some
                            (when (set? (second sym))
@@ -121,6 +126,8 @@
        "\n\nOriginal error: " (.-stack e)))
 
 (defn- eval-in [state form]
+  (when js/goog.DEBUG
+    (js/console.info "EVAL-FORM" (str form)))
   (cljs/eval state
         form
         {:eval (fn [src]

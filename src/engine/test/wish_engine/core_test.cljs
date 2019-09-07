@@ -1,12 +1,6 @@
 (ns wish-engine.core-test
   (:require [cljs.test :refer-macros [deftest testing is]]
-            [wish-engine.core :refer [create-engine]]
-            [wish-engine.model :as engine]))
-
-(defn- eval-form [form]
-  (let [eng (create-engine)
-        state (engine/create-state eng)]
-    (engine/eval-source-form eng state form)))
+            [wish-engine.util :refer [eval-form]]))
 
 (deftest engine-test
   (testing "Basic compilation"
@@ -21,9 +15,9 @@
 
     (let [f (eval-form '(fn [v]
                           (cond
-                            (<= 42 v 9001) :serenity
-                            (< v 42) :firefly
+                            (<= 42 v 9001) :firefly
+                            (> v 9001) :serenity
                             :else :alliance)))]
-      (is (= :serenity (f 42)))
-      (is (= :firefly (f 41)))
+      (is (= :firefly (f 42)))
+      (is (= :serenity (f 9002)))
       (is (= :alliance (f 0))))))
