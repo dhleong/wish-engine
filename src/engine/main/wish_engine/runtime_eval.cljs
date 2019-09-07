@@ -32,40 +32,6 @@
       ;; Expose!
       ;;
 
-      ;; (export-fn inc)
-      ;; (export-fn dec)
-
-      ;; (export-fn keyword)
-      ;; (export-fn namespace)
-      ;; (export-fn name)
-      ;; (export-fn str)
-      ;; (export-fn symbol)
-      ;; (export-fn vector)
-
-      ;; (export-fn concat)
-      ;; (export-fn cons)
-      ;; (export-fn contains?)
-      ;; (export-fn count)
-      ;; (export-fn identity)
-      ;; (export-fn keys)
-      ;; (export-fn vals)
-      ;; (export-fn vec)
-
-      ;; (export-fn get)
-      ;; (export-fn get-in)
-
-      ;; (export-fn comp)
-      ;; (export-fn filter)
-      ;; (export-fn keep)
-      ;; (export-fn map)
-      ;; (export-fn mapcat)
-      ;; (export-fn remove)
-      ;; (export-fn some)
-
-      ;; (export-fn partial)
-
-      ; for debugging
-      ;; (export-fn println)
       ))
 
 (export-fn + mathify)
@@ -81,27 +47,45 @@
 (export-fn not)
 (export-fn min)
 (export-fn max)
+(export-fn inc)
+(export-fn dec)
+
+(export-fn nil?)
+(export-fn keyword)
+(export-fn namespace)
+(export-fn name)
+(export-fn str)
+(export-fn symbol)
+(export-fn vector)
+
+(export-fn concat)
+(export-fn cons)
+(export-fn contains?)
+(export-fn count)
+(export-fn identity)
+(export-fn keys)
+(export-fn vals)
+(export-fn vec)
+
+(export-fn get)
+(export-fn get-in)
+
+(export-fn comp)
+(export-fn filter)
+(export-fn keep)
+(export-fn map)
+(export-fn mapcat)
+(export-fn remove)
+(export-fn some)
+
+(export-fn partial)
+
+; for debugging
+(export-fn println)
 
 
 (when-not js/goog.DEBUG
-  ;; (export-macro ->)
-  ;; (export-macro ->>)
-  ;; (export-macro as->)
-  ;; (export-macro cond)
-  ;; (export-macro cond->)
-  ;; (export-macro cond->>)
-  ;; (export-macro if-let)
-  ;; (export-macro if-not)
-  ;; (export-macro if-some)
-  ;; (export-macro some->)
-  ;; (export-macro some->>)
-  ;; (export-macro when)
-  ;; (export-macro when-first)
-  ;; (export-macro when-let)
-  ;; (export-macro when-not)
-  ;; (export-macro when-some)
-
-  ; this is required for (cond)
+  ; this is required for (cond, etc.)
   (export-sym cljs.core/truth_)
 
   (export-sym cljs.core/Symbol)
@@ -111,14 +95,27 @@
   (export-sym cljs.core/PersistentHashSet)
   (export-sym cljs.core/PersistentVector))
 
-(defn- process-if-let [bindings then & [else]]
-  (let [form (bindings 0)
-        value (bindings 1)]
-    `(let* [tmp# ~value]
-       (if tmp#
-         (let* [~form tmp#]
-           ~then)
-         ~else))))
+(defn- process-if-let
+  ([bindings then] (process-if-let bindings then nil))
+  ([bindings then else]
+   (let [form (bindings 0)
+         value (bindings 1)]
+     `(let* [tmp# ~value]
+        (if tmp#
+          (let* [~form tmp#]
+            ~then)
+          ~else)))))
+
+(defn- process-if-some
+  ([bindings then] (process-if-some bindings then nil))
+  ([bindings then else]
+   (let [form (bindings 0)
+         value (bindings 1)]
+     `(let* [tmp# ~value]
+        (if (wish-engine.runtime-eval/exported-nil? tmp#)
+          ~else
+          (let* [~form tmp#]
+            ~then))))))
 
 ; most of this is borrowed from clojure.core
 (def exported-macros
@@ -131,6 +128,7 @@
                               (list form x))]
                (recur threaded (next forms)))
              x)))
+
    '->> (fn [x & forms]
           (loop [x x, forms forms]
             (if forms
@@ -163,9 +161,10 @@
              `(if (not ~condition)
                 ~@body))
 
-  ;; (export-macro if-some)
-  ;; (export-macro some->)
-  ;; (export-macro some->>)
+   'if-some process-if-some
+
+   ;; (export-macro some->)
+   ;; (export-macro some->>)
 
    'when (fn [condition & body]
            `(if ~condition (do ~@body)))
@@ -173,9 +172,11 @@
    'when-let (fn [bindings & body]
                (process-if-let bindings `(do ~@body)))
 
-  ;; (export-macro when-first)
-  ;; (export-macro when-not)
-  ;; (export-macro when-some)
+   ;; (export-macro when-first)
+   ;; (export-macro when-not)
+
+   'when-some (fn [bindings & body]
+                (process-if-some bindings `(do ~@body)))
 
    })
 

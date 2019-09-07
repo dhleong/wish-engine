@@ -62,7 +62,15 @@
   (testing "if-not"
     (is (= "true" (eval-form '(if-not true
                                 "false"
-                                "true"))))))
+                                "true")))))
+
+  (testing "if-some"
+    (is (= "false" (eval-form '(if-some [a false]
+                                 "false"
+                                 "true"))))
+    (is (= "nil" (eval-form '(if-some [a nil]
+                               "true"
+                               "nil"))))))
 
 (deftest when-forms-test
   (testing "when"
@@ -72,4 +80,12 @@
   (testing "when-let"
     (is (= 42 (eval-form '(when-let [a 42]
                             (* a 2)
-                            a))))))
+                            a)))))
+
+  (testing "when-some"
+    (is (= "false" (eval-form '(when-some [a false]
+                                 "true"
+                                 (str a)))))
+    (is (nil? (eval-form '(when-some [a nil]
+                            "nil"
+                            "true"))))))
