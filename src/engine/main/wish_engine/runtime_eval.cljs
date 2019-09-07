@@ -23,16 +23,9 @@
 (defn ^:export mathify [args]
   (map ->number args))
 
-(def exported-fns
-  (-> { ; these alias directly to JS functions
-       'ceil 'js/Math.ceil
-       'floor 'js/Math.floor}
-
-      ;;
-      ;; Expose!
-      ;;
-
-      ))
+; start with these, which alias directly to JS functions
+(def exported-fns {'ceil 'js/Math.ceil
+                   'floor 'js/Math.floor})
 
 (export-fn + mathify)
 (export-fn - mathify)
