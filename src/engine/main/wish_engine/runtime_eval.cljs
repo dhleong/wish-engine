@@ -188,8 +188,16 @@
    'when-let (fn [bindings & body]
                (process-if-let bindings `(do ~@body)))
 
-   ;; (export-macro when-first)
-   ;; (export-macro when-not)
+   'when-first (fn [bindings & body]
+                 (let [[x xs] bindings
+                       xs-var (gensym "xs")]
+                   (process-if-let [xs-var `(seq ~xs)]
+                                   `(let* [~x (first ~xs-var)]
+                                      ~@body))))
+
+   'when-not (fn [condition & body]
+               `(if (not ~condition)
+                  (do ~@body)))
 
    'when-some (fn [bindings & body]
                 (process-if-some bindings `(do ~@body)))

@@ -106,10 +106,25 @@
                             (* a 2)
                             a)))))
 
+  (testing "when-first"
+    (is (= 42 (eval-form '(when-first [a [42]]
+                            (* a 2)
+                            a))))
+    (is (nil? (eval-form '(when-first [a []]
+                            (* a 2))))))
+
   (testing "when-some"
     (is (= "false" (eval-form '(when-some [a false]
                                  "true"
                                  (str a)))))
     (is (nil? (eval-form '(when-some [a nil]
+                            "nil"
+                            "true")))))
+
+  (testing "when-not"
+    (is (= "true" (eval-form '(when-not false
+                                42
+                                "true"))))
+    (is (nil? (eval-form '(when-not true
                             "nil"
                             "true"))))))
