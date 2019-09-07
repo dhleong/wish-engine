@@ -25,38 +25,66 @@
           "<" "_LT_"
           "=" "_EQ_")))))
 
-(defmacro expose-fn
-  [m fn-symbol & [run-on-args]]
+;; (defmacro expose-fn
+;;   [m fn-symbol & [run-on-args]]
+;;   (let [n (name fn-symbol)
+;;         this-ns-name (-> config/runtime-eval-ns
+;;                           name
+;;                           ->js-name)
+;;         exported-name (str "exported-" n)
+;;         exported-symbol (symbol (str "exported-"
+;;                                      (str/replace n #"/" "_SLASH_")))
+;;         js-name (str this-ns-name "."
+;;                      (->js-name exported-name))
+;;         core-ns (or #?(:clj (some-> fn-symbol resolve meta :ns ns-name name))
+;;                     "cljs.core")
+;;         core-ns-symbol (symbol core-ns n)]
+;;     `(as-> ~m ~'m
+;;        (do
+;;          (defn ^:export ~exported-symbol
+;;            [& ~'args]
+;;            ~(if run-on-args
+;;               `(apply ~core-ns-symbol (~run-on-args ~'args))
+;;               `(apply ~core-ns-symbol ~'args)))
+;;          (when-not js/goog.DEBUG
+;;            (~'js/goog.exportSymbol ~js-name ~exported-symbol))
+;;          (assoc ~'m (symbol ~n) (symbol
+;;                                   ~this-ns-name
+;;                                   ~(name exported-symbol)))))))
+
+(defmacro export-fn
+  [fn-symbol & [?apply-to-args]]
   (let [n (name fn-symbol)
+        exported-map-name 'exported-fns
         this-ns-name (-> config/runtime-eval-ns
-                          name
-                          ->js-name)
+                         name
+                         ->js-name)
         exported-name (str "exported-" n)
         exported-symbol (symbol (str "exported-"
                                      (str/replace n #"/" "_SLASH_")))
         js-name (str this-ns-name "."
                      (->js-name exported-name))
-        core-ns (or (some-> fn-symbol resolve meta :ns ns-name name)
+        core-ns (or #?(:clj (some-> fn-symbol resolve meta :ns ns-name name))
                     "cljs.core")
         core-ns-symbol (symbol core-ns n)]
-    `(as-> ~m ~'m
-       (do
-         (defn ^:export ~exported-symbol
-           [& ~'args]
-           ~(if run-on-args
-              `(apply ~core-ns-symbol (~run-on-args ~'args))
-              `(apply ~core-ns-symbol ~'args)))
-         (when-not js/goog.DEBUG
-           (~'js/goog.exportSymbol ~js-name ~exported-symbol))
-         (assoc ~'m (symbol ~n) (symbol
-                                  ~this-ns-name
-                                  ~(name exported-symbol)))))))
+    `(do
+       (defn ^:export ~exported-symbol
+         [& ~'args]
+         ~(if ?apply-to-args
+            `(apply ~core-ns-symbol (~?apply-to-args ~'args))
+            `(apply ~core-ns-symbol ~'args)))
+       (when-not js/goog.DEBUG
+         (~'js/goog.exportSymbol ~js-name ~exported-symbol))
+       (set! ~exported-map-name
+             (assoc ~exported-map-name (symbol ~n) (symbol
+                                                     ~this-ns-name
+                                                     ~(name exported-symbol)))))))
 
 (defmacro export-macro
   "Ensure a cljs.core macro is exported"
   [macro-sym & [conditional?]]
   (let [export `(~'js/goog.exportSymbol
-                  ~(str "cljs.core$macros."
+                  ~(str (name config/runtime-eval-ns) "$macros."
                         (->js-name (name macro-sym)))
                   ~(symbol (str "cljs.core$macros/"
                                 (name macro-sym))))]
@@ -67,7 +95,8 @@
 
 (defmacro export-sym [sym]
   (let [n (name sym)
-        core-ns (if-let [sym-meta (-> sym resolve meta)]
+        core-ns (if-let [sym-meta #?(:clj (-> sym resolve meta)
+                                     :cljs nil)]
                   (-> sym-meta :ns ns-name name)
                   "cljs.core")]
     `(~'js/goog.exportSymbol

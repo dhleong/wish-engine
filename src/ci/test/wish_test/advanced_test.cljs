@@ -3,15 +3,19 @@
   (:require [cljs.test :refer-macros [deftest testing is]]))
 
 (defn advanced-eval [s]
-  (js/wish_test_helper.engine.eval_string s))
+  (println s)
+  nil
+  #_(js/wish_test_helper.engine.eval_string s))
 
 (deftest advanced-test
   (testing "Basic math"
+    (println "math")
     (is (= 42 (advanced-eval "(+ 20 22)"))))
 
   (testing "Fn compilation"
     (let [f (advanced-eval "(fn [v]
                               (+ 20 v))")]
+      (println "compile fn")
       (is (ifn? f))
       (is (= 42 (f 22)))))
 

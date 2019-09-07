@@ -3,10 +3,10 @@
             [clojure.analyzer.api :refer-macros [no-warn]]
             [clojure.walk :refer [postwalk]]
             [cljs.reader :as edn]
-            [cljs.js :refer [empty-state eval js-eval]]
+            [cljs.js :as cljs :refer [empty-state js-eval]]
             [wish-engine.model :refer [WishEngine]]
             [wish-engine.runtime.config :as config]
-            [wish-engine.runtime-eval :refer [exposed-fns]]))
+            [wish-engine.runtime-eval :refer [exported-fns]]))
 
 
 ; ======= Consts ==========================================
@@ -73,7 +73,7 @@
   "Given a raw symbol/expr, return something that we
    can actually compile"
   [sym]
-  (let [result (or (get exposed-fns sym)
+  (let [result (or (get exported-fns sym)
                    (->special-form sym)
 
                    (when (and (symbol? sym)
@@ -114,8 +114,14 @@
 
 ; ======= Evaluation ======================================
 
+(defn- eval-err [form src e]
+  (str "FAILED to js/eval:\n\n"
+       (:source src)
+       "\n\nOriginal form: " form
+       "\n\nOriginal error: " (.-stack e)))
+
 (defn- eval-in [state form]
-  (eval state
+  (cljs/eval state
         form
         {:eval (fn [src]
                  (let [src (update src :source process-source)]
@@ -123,13 +129,9 @@
                      (js/console.warn "EVAL" (:source src))
                      (js-eval src)
                      (catch :default e
-                       (js/console.warn (str "FAILED to js/eval:\n\n"
-                                             (:source src)
-                                             "\n\nOriginal error: " (.-stack e)))
-                       (throw (js/Error.
-                                (str "FAILED to js/eval:\n\n"
-                                     (:source src)
-                                     "\n\nOriginal error: " (.-stack e))))))))
+                       (let [msg (eval-err form src e)]
+                         (js/console.warn msg)
+                         (throw (js/Error. msg)))))))
 
          :context :expr
          :ns config/runtime-eval-ns}
