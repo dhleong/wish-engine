@@ -215,5 +215,12 @@
    'when-some (fn [bindings & body]
                 (process-if-some bindings `(do ~@body)))
 
+
+   ; ======= wish-engine-specific macros =====================
+
+   'on-state (fn [& body]
+               `(fn* [~'state]
+                  ~(apply thread-> 'state body)))
+
    })
 

@@ -149,3 +149,11 @@
     (is (nil? (eval-form '(when-not true
                             "nil"
                             "true"))))))
+
+(deftest wish-engine-macros-test
+  (testing "on-state"
+    (let [f (eval-form '(on-state
+                          (assoc :flew? true)))]
+      (is (ifn? f))
+      (is (= {:flew? true}
+             (f {}))))))
