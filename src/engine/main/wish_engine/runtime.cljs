@@ -122,6 +122,18 @@
 
 (defn- create-new-eval-state []
   (let [new-state (empty-state)]
+    ; HACKS: this is some major hacks for compat with advanced compilation.
+    ; Basically, in the analysis step, it occasionally gets to a point where
+    ; it wants to check if the type of a clause is a clojure variable, and
+    ; to do that it eventually attempts to resolve the symbol as a macro
+    ; in the cljs.core namespace. The code assumes that the cljs.core$macros
+    ; namespace exists, but under advanced compilation it does *not*, by
+    ; default. So, we make it happen.
+    (when-not cljs.core.NS_CACHE
+      (set! cljs.core.NS_CACHE
+            (atom {'cljs.core$macros (cljs.core.Namespace.
+                                       #js {}
+                                       "cljs.core$macros")})))
 
     ; eval an ns form so the imports are recognized
     (eval-in
@@ -141,6 +153,7 @@
 
     (try
       (js/console.info "eval-form" (str form))
+      (println @(.-eval-state engine))
       (no-warn
         (eval-in @(.-eval-state engine)
                  cleaned-form))

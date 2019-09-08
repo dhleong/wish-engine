@@ -6,11 +6,14 @@
   (js/wish_test_helper.engine.eval_string s))
 
 (deftest advanced-test
-  (testing "Basic math"
-    (is (= 42 (advanced-eval "(+ 20 22)"))))
+  (testing "Basic math, fn interpolation"
+    (is (= 42 (advanced-eval "(+ 20 22)")))
+    (is (= true (advanced-eval "(not false)")))
+    #_(is (nil? (advanced-eval "(if (not true) 42)"))))
 
   (testing "Macro expansion"
-    (is (= 42 (advanced-eval "(when true 42)"))))
+    (is (= 42 (advanced-eval "(when true 42)")))
+    (is (nil? (advanced-eval "(when-not true 42)"))))
 
   (testing "Fn compilation"
     (let [f (advanced-eval "(fn [v]
