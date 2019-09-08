@@ -15,8 +15,12 @@
   (throw #?(:cljs (js/Error. (apply str message))
             :clj (Exception. (apply str message)))))
 
-(defn throw-arg [fn-name arg]
-  (throw-msg "Invalid argument to " fn-name ": " arg))
+(defn throw-arg
+  ([fn-name arg] (throw-arg fn-name arg nil))
+  ([fn-name arg reason-str]
+   (let [reason (when reason-str
+                  (str " (" reason-str ")"))]
+     (throw-msg fn-name ": Invalid argument" reason ":\n" arg))))
 
 (defn flatten-lists
   "Call on a varargs list to support both the usual varargs invocation and
@@ -130,6 +134,30 @@
 
 ; ======= Entity-modifying forms ==========================
 
+;;;
+;;; Provide attr
+;;;
+
+(defn-api provide-attr [state attr-id-or-path value]
+  (when *engine-state*
+    (throw-msg "provide-attr must not be called at the top level."))
+
+  (let [attr-path (cond
+                    (vector? attr-id-or-path) attr-id-or-path
+                    (keyword? attr-id-or-path) [attr-id-or-path]
+                    :else (throw-arg "provide-attr" attr-id-or-path
+                                     ":attr or [:attr :path]"))
+
+        state (assoc-in state (cons :attrs attr-path) value)]
+
+    (if-let [context *apply-context*]
+      (assoc-in state (cons :attrs/meta attr-path) {:wish-engine/source context})
+      state)))
+
+;;;
+;;; Provide Feature
+;;;
+
 (defn-api provide-feature [state feature]
   (when *engine-state*
     (throw-msg "provide-feature(s) must not be called at the top level. Try `declare-features`"))
@@ -137,7 +165,8 @@
   (let [id (cond
              (map? feature) (:id feature)
              (keyword? feature) feature
-             :else (throw-msg "Invalid feature arg: " feature))
+             :else (throw-arg "provide-feature" feature
+                              "feature ID or map"))
 
         ; declare the feature on the entity state, if a map
         state (if (map? feature)

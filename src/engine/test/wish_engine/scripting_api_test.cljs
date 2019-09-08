@@ -61,6 +61,21 @@
               :four? true}
              (state! {:level 4}))))))
 
+(deftest provide-attr-test
+  (testing "Provide attrs from :! fn"
+    (let [{{f :serenity} :features} (eval-state
+                                      '(declare-features
+                                         {:id :serenity
+                                          :! (on-state
+                                               (provide-attr
+                                                 [:ship :role]
+                                                 :captain))}))
+          state! (:! f)]
+      (is (ifn? state!))
+      (is (= {:attrs {:ship {:role :captain}}
+              :attrs/meta {:ship {:role {:wish-engine/source :serenity}}}}
+             (state! {}))))))
+
 (deftest provide-features-test
   (testing "Provide feature from :! fn"
     (let [{{f :serenity} :features} (eval-state
