@@ -95,15 +95,11 @@
        "\n\nOriginal error: " (.-stack e)))
 
 (defn- eval-in [state form]
-  (when js/goog.DEBUG
-    (js/console.info "EVAL-FORM" (str form)))
   (cljs/eval state
         form
         {:eval (fn [src]
-                 (js/console.warn "process..." (:source src))
                  (let [src (update src :source process-source)]
                    (try
-                     (js/console.warn "EVAL" (:source src))
                      (js-eval src)
                      (catch :default e
                        (let [msg (eval-err form src e)]
@@ -154,7 +150,6 @@
   (let [cleaned-form (clean-form form)]
 
     (try
-      (js/console.info "eval-form" (str form))
       (no-warn
         (eval-in @(.-eval-state engine)
                  cleaned-form))
