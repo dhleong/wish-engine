@@ -1,8 +1,11 @@
-(ns wish-engine.scripting-api)
+(ns wish-engine.scripting-api
+  (:require [wish-engine.runtime.api :refer-macros [defn-api]]))
+
+(def exported-fns {})
 
 ; ======= Public API ======================================
 
-(defn ^:export has?
+(defn-api has?
   "Alias for (some) that can handle sets in production"
   [vals-set coll]
   (some
@@ -10,7 +13,7 @@
       (contains? vals-set item))
     coll))
 
-(defn ^:export ordinal [n]
+(defn-api ordinal [n]
   (str n
        (if (<= 11 n 19)
          "th"

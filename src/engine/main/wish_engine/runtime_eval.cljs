@@ -4,14 +4,6 @@
   (:require-macros [wish-engine.runtime.js :refer [export-fn export-sym]]))
 
 
-; ======= Public API ======================================
-
-;; explicitly export for cljs use:
-
-(def ^:export has? api/has?)
-(def ^:export ordinal api/ordinal)
-
-
 ; ======= Fn/macro export =================================
 
 (defn- ->number [to-coerce]
@@ -25,8 +17,9 @@
   (map ->number args))
 
 ; start with these, which alias directly to JS functions
-(def exported-fns {'ceil 'js/Math.ceil
-                   'floor 'js/Math.floor})
+(def exported-fns (merge {'ceil 'js/Math.ceil
+                          'floor 'js/Math.floor}
+                         api/exported-fns))
 
 (export-fn + mathify)
 (export-fn - mathify)

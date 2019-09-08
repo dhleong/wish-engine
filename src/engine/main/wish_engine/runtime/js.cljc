@@ -25,18 +25,40 @@
           "<" "_LT_"
           "=" "_EQ_")))))
 
+(defn cljs-env?
+  "Take the &env from a macro, and tell whether we are expanding into cljs."
+  [env]
+  (boolean (:ns env)))
+
+(defmacro when-cljs
+  "Return `body` in an implicit `do` if we are generating cljs code
+   https://groups.google.com/d/msg/clojurescript/iBY5HaQda4A/w1lAQi9_AwsJ"
+  [& body]
+  (when (cljs-env? &env)
+    (cons 'do body)))
+
+(defn export-fn-symbol-stmt [n exported-symbol]
+  (let [exported-map-name 'exported-fns
+        this-ns-name (-> *ns* ns-name name)
+        js-name (str (->js-name this-ns-name) "."
+                     (->js-name (name exported-symbol)))]
+    `(when-cljs
+       (set! ~exported-map-name
+             (assoc ~exported-map-name
+                    ~(if (string? n)
+                       `(symbol ~n)
+                       `(symbol ~(name n)))
+                    (symbol
+                      ~this-ns-name
+                      ~(name exported-symbol))))
+       (when-not js/goog.DEBUG
+         (~'js/goog.exportSymbol ~js-name ~exported-symbol)))))
+
 (defmacro export-fn
   [fn-symbol & [?apply-to-args]]
   (let [n (name fn-symbol)
-        exported-map-name 'exported-fns
-        this-ns-name (-> config/runtime-eval-ns
-                         name
-                         ->js-name)
-        exported-name (str "exported-" n)
         exported-symbol (symbol (str "exported-"
                                      (str/replace n #"/" "_SLASH_")))
-        js-name (str this-ns-name "."
-                     (->js-name exported-name))
         core-ns (or #?(:clj (some-> fn-symbol resolve meta :ns ns-name name))
                     "cljs.core")
         core-ns-symbol (symbol core-ns n)]
@@ -45,13 +67,8 @@
          [& ~'args]
          ~(if ?apply-to-args
             `(apply ~core-ns-symbol (~?apply-to-args ~'args))
-            `(apply ~core-ns-symbol ~'args)))
-       (when-not js/goog.DEBUG
-         (~'js/goog.exportSymbol ~js-name ~exported-symbol))
-       (set! ~exported-map-name
-             (assoc ~exported-map-name (symbol ~n) (symbol
-                                                     ~this-ns-name
-                                                     ~(name exported-symbol)))))))
+            `(apply ~core-ns-symbol ~'args))) 
+       ~(export-fn-symbol-stmt n exported-symbol))))
 
 (defmacro export-macro
   "Ensure a cljs.core macro is exported"
