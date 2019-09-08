@@ -25,33 +25,6 @@
           "<" "_LT_"
           "=" "_EQ_")))))
 
-;; (defmacro expose-fn
-;;   [m fn-symbol & [run-on-args]]
-;;   (let [n (name fn-symbol)
-;;         this-ns-name (-> config/runtime-eval-ns
-;;                           name
-;;                           ->js-name)
-;;         exported-name (str "exported-" n)
-;;         exported-symbol (symbol (str "exported-"
-;;                                      (str/replace n #"/" "_SLASH_")))
-;;         js-name (str this-ns-name "."
-;;                      (->js-name exported-name))
-;;         core-ns (or #?(:clj (some-> fn-symbol resolve meta :ns ns-name name))
-;;                     "cljs.core")
-;;         core-ns-symbol (symbol core-ns n)]
-;;     `(as-> ~m ~'m
-;;        (do
-;;          (defn ^:export ~exported-symbol
-;;            [& ~'args]
-;;            ~(if run-on-args
-;;               `(apply ~core-ns-symbol (~run-on-args ~'args))
-;;               `(apply ~core-ns-symbol ~'args)))
-;;          (when-not js/goog.DEBUG
-;;            (~'js/goog.exportSymbol ~js-name ~exported-symbol))
-;;          (assoc ~'m (symbol ~n) (symbol
-;;                                   ~this-ns-name
-;;                                   ~(name exported-symbol)))))))
-
 (defmacro export-fn
   [fn-symbol & [?apply-to-args]]
   (let [n (name fn-symbol)
