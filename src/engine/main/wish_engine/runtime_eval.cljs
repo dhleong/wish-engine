@@ -4,7 +4,8 @@
   (:require-macros [wish-engine.runtime.js :refer [export-fn export-sym]]))
 
 
-; ======= Fn/macro export =================================
+
+; ======= Util fns ========================================
 
 (defn- ->number [to-coerce]
   (when to-coerce
@@ -15,6 +16,34 @@
 
 (defn ^:export mathify [args]
   (map ->number args))
+
+(defn ^:export combinations
+  "Produce a lazy sequence of all combinations of elements of `seqs`,
+   as eg: `(for [s1 (nth seqs 0), s2 (nth seqs 1)] [s1 s2])`"
+  [seqs]
+  ; this is based on https://github.com/clojure/math.combinatorics
+  ; (cartesian product)
+  (let [v-original-seqs (vec seqs)
+        step
+        (fn step [v-seqs]
+          (let [increment
+                (fn increment [v-seqs]
+                  (loop [i (dec (count v-seqs))
+                         v-seqs v-seqs]
+                    (if (= i -1)
+                      nil
+                      (if-let [rst (next (v-seqs i))]
+                        (assoc v-seqs i rst)
+                        (recur (dec i)
+                               (assoc v-seqs i (v-original-seqs i)))))))]
+            (when v-seqs
+              (cons (mapv first v-seqs)
+                    (lazy-seq (step (increment v-seqs)))))))]
+    (when (every? seq seqs)
+      (lazy-seq (step v-original-seqs)))))
+
+
+; ======= Fn/macro export =================================
 
 ; start with these, which alias directly to JS functions
 (def exported-fns (merge {'ceil 'js/Math.ceil
@@ -60,12 +89,14 @@
 (export-fn get-in)
 (export-fn first)
 (export-fn next)
+(export-fn nth)
 
 (export-fn comp)
 (export-fn filter)
 (export-fn keep)
 (export-fn map)
 (export-fn mapcat)
+(export-fn range)
 (export-fn remove)
 (export-fn some)
 (export-fn seq)
@@ -104,6 +135,27 @@
       (if or#
         or#
         ~(apply process-or others)))))
+
+(defn- process-for [seq-exprs body-expr]
+  ; NOTE this is a *very* cut-down version, to work around limitations
+  ; like not having lazy-seq or chunked fns exported; future work could add
+  ; support for things like :when and :let
+  (let [[seq-decls _filters] (split-with #(not (keyword? %)) seq-exprs)
+        [seq-names seq-values] (->> seq-decls
+                                    (partition 2)
+                                    (apply map list))
+        let-form (->> seq-names
+                      (map-indexed list)
+                      (mapcat (fn [[i n]]
+                                [n (list (config/exported-fqn 'nth)
+                                         'args-list
+                                         i)]))
+                      vec)]
+    `(~(config/exported-fqn 'map)
+                            (fn* [~'args-list]
+                                 (let* ~let-form
+                                   ~body-expr))
+                            (combinations ~(vec seq-values)))))
 
 (defn- process-if-let
   ([bindings then] (process-if-let bindings then nil))
@@ -182,6 +234,8 @@
                      (throw (js/Error.
                               "cond requires an even number of forms")))
                    (apply process-cond (nnext clauses)))))
+
+   'for process-for
 
    'if-let process-if-let
 

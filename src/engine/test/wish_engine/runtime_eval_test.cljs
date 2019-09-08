@@ -55,6 +55,19 @@
                                    (= 42 9001) :serenity
                                    :else :alliance))))))
 
+(deftest for-form-test
+  (testing "for: simple"
+    (is (= [2 4 6 8 10]
+           (eval-form '(for [v (range 5)]
+                         (* 2 (inc v)))))))
+
+  (testing "for: multiple seqs"
+    (is (= [[0 2] [0 4] [0 6]
+            [1 2] [1 4] [1 6]]
+           (eval-form '(for [i (range 2)
+                             v (range 3)]
+                         [i (* 2 (inc v))]))))))
+
 (deftest if-forms-test
   (testing "if-let"
     (is (= 42 (eval-form '(if-let [n 21]
