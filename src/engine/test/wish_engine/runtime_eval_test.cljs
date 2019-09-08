@@ -82,14 +82,16 @@
     (is (= 9001 (eval-form '(and true
                                42
                                9001))))
+    (is (false? (eval-form '(and true false))))
     (is (nil? (eval-form '(and nil))))
-    (is (false? (eval-form '(and true false)))))
+    (is (true? (eval-form '(and)))))
 
   (testing "or"
     (is (= 42 (eval-form '(or (when false 22)
                               (if-not true 32)
                               42))))
-    (is (nil? (eval-form '(or false))))))
+    (is (false? (eval-form '(or false))))
+    (is (nil? (eval-form '(or))))))
 
 (deftest some-forms-test
   (testing "some->"

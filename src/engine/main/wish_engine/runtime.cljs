@@ -53,10 +53,12 @@
 
                    (when (and (list? sym) (symbol? (first sym)))
                      (when-let [macro (get exported-macros (first sym))]
-                       (apply macro (rest sym))))
+                       (let [evaluated (apply macro (rest sym))]
+                         (case evaluated
+                           nil nil-symbol
+                           false `(do false)
+                           evaluated))))
 
-                   ; (or) and (and) don't play nicely for some reason,
-                   ; so we convert them into something that works
                    (when (list? sym)
                      (let [fn-call (first sym)]
                        (if (keyword? fn-call)
@@ -153,7 +155,6 @@
 
     (try
       (js/console.info "eval-form" (str form))
-      (println @(.-eval-state engine))
       (no-warn
         (eval-in @(.-eval-state engine)
                  cleaned-form))
