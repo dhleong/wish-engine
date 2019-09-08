@@ -7,4 +7,10 @@
         state (engine/create-state eng)]
     (engine/eval-source-form eng state form)))
 
+(defn eval-state [form]
+  (let [eng (create-engine)
+        state (engine/create-state eng)]
+    (engine/eval-source-form eng state form)
+    @state))
+
 

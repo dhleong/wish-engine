@@ -6,7 +6,8 @@
             [cljs.js :as cljs :refer [empty-state js-eval]]
             [wish-engine.model :refer [WishEngine]]
             [wish-engine.runtime.config :as config]
-            [wish-engine.runtime-eval :refer [exported-fns exported-macros]]))
+            [wish-engine.runtime-eval :refer [exported-fns exported-macros]]
+            [wish-engine.scripting-api :as api]))
 
 
 ; ======= Consts ==========================================
@@ -170,11 +171,12 @@
 
 (deftype JSWishEngine [eval-state]
   WishEngine
-  (create-state [this] {})
+  (create-state [this] (atom {}))
   (parse-string [this s]
     (edn/read-string s #_(str "(do " s ")")))
   (eval-source-form [this state form]
-    (eval-form this form)))
+    (binding [api/*engine-state* state]
+      (eval-form this form))))
 
 (defn create-engine []
   (->JSWishEngine (delay (create-new-eval-state))))

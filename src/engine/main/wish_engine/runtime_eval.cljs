@@ -37,10 +37,11 @@
 (export-fn inc)
 (export-fn dec)
 
-(export-fn nil?)
+(export-fn identity)
 (export-fn keyword)
 (export-fn namespace)
 (export-fn name)
+(export-fn nil?)
 (export-fn str)
 (export-fn symbol)
 (export-fn vector)
@@ -49,10 +50,11 @@
 (export-fn cons)
 (export-fn contains?)
 (export-fn count)
-(export-fn identity)
+(export-fn vec)
+
+(export-fn assoc)
 (export-fn keys)
 (export-fn vals)
-(export-fn vec)
 
 (export-fn get)
 (export-fn get-in)
