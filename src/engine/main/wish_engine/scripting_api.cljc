@@ -1,7 +1,7 @@
 (ns wish-engine.scripting-api
   "Public scripting API"
   (:require [wish-engine.runtime.api :refer-macros [defn-api]]
-            [wish-engine.util :refer [conj-vec throw-msg]]))
+            [wish-engine.util :refer [conj-vec feature-by-id throw-msg]]))
 
 
 (def exported-fns {})
@@ -181,8 +181,12 @@
                   (assoc base :wish-engine/source ctx)
                   base)))
 
-      ; TODO apply any apply-fn
-      )))
+      ; apply any apply-fn
+      (if-let [apply-fn (if (map? feature)
+                          (:! feature)
+                          (:! (feature-by-id state id)))]
+        (apply-fn state)
+        state))))
 
 (defn-api provide-features [state & features]
   (loop [state state

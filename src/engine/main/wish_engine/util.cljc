@@ -15,3 +15,7 @@
     (empty? coll) [v]
 
     :else (throw-msg "Illegal arg to conj-vec: " (type coll) ": " coll)))
+
+(defn feature-by-id [state id]
+  (or (get-in state [:declared-features id])
+      (get-in state [:wish-engine/state :features id])))

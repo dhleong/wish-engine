@@ -3,6 +3,9 @@
             [wish-engine.test-util :refer [eval-form]]))
 
 (deftest basic-test
+  (testing "Math"
+    (is (= 42 (eval-form '(+ 20 22)))))
+
   (testing "let"
     (is (= 42 (eval-form '(let [n 21]
                             (* 2 n))))))
@@ -10,7 +13,23 @@
     (is (= true (eval-form '(if true
                               true))))
     (is (nil? (eval-form '(if false
-                            true))))))
+                            true)))))
+
+  (testing "Exported functions"
+    (is (= "1st" (eval-form '(ordinal 1))))
+    (is (= true (eval-form '(has? #{:mreynolds} [:mreynolds])))))
+
+  (testing "Macro/fn evaluation"
+    (is (= 9001 (eval-form '(when 42 9001))))
+
+    (let [f (eval-form '(fn [v]
+                          (cond
+                            (<= 42 v 9001) :firefly
+                            (> v 9001) :serenity
+                            :else :alliance)))]
+      (is (= :firefly (f 42)))
+      (is (= :serenity (f 9002)))
+      (is (= :alliance (f 0))))))
 
 ;;;
 ;;; Macro expansion

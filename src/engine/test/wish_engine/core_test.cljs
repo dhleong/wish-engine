@@ -1,23 +1,57 @@
 (ns wish-engine.core-test
   (:require [cljs.test :refer-macros [deftest testing is]]
-            [wish-engine.test-util :refer [eval-form]]))
+            [wish-engine.test-util :refer [eval-state]]
+            [wish-engine.core :as core]))
 
-(deftest engine-test
-  (testing "Basic compilation"
-    (is (= 42 (eval-form '(+ 20 22)))))
+(deftest inflate-entity-test
+  (testing "Inflate entity"
+    (let [{{f :base-feature} :features :as state}
+          (eval-state '(declare-features
+                         {:id :serenity
+                          :! (on-state
+                               (provide-attr
+                                 :serenity
+                                 true))}
 
-  (testing "Exported functions"
-    (is (= "1st" (eval-form '(ordinal 1))))
-    (is (= true (eval-form '(has? #{:mreynolds} [:mreynolds])))))
+                         {:id :base-feature
+                          :! (on-state
+                               (provide-attr
+                                 :base-feature
+                                 true)
+                               (provide-features
+                                 :serenity
 
-  (testing "Macro evaluation"
-    (is (= 9001 (eval-form '(when 42 9001))))
+                                 {:id :provided-feature
+                                  :! (on-state
+                                       (provide-attr
+                                         :provided-feature
+                                         true)
 
-    (let [f (eval-form '(fn [v]
-                          (cond
-                            (<= 42 v 9001) :firefly
-                            (> v 9001) :serenity
-                            :else :alliance)))]
-      (is (= :firefly (f 42)))
-      (is (= :serenity (f 9002)))
-      (is (= :alliance (f 0))))))
+                                       (provide-features
+                                         {:id :three-nested
+                                          :! (on-state
+                                               (provide-attr
+                                                 :three-nested
+                                                 true))}))}))}))
+          inflated (core/inflate-entity
+                     state
+                     f
+                     {})]
+
+      (is (= {:base-feature true
+              :serenity true
+              :provided-feature true
+              :three-nested true}
+             (:attrs inflated)))
+      (is (= [:serenity
+              :provided-feature
+              :three-nested]
+             (->> inflated
+                  :active-features
+                  (map :id))))
+      (is (= [:serenity
+              :provided-feature
+              :three-nested]
+             (->> inflated
+                  :features
+                  (map :id)))))))
