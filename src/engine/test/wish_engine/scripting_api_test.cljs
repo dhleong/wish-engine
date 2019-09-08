@@ -1,6 +1,6 @@
 (ns wish-engine.scripting-api-test
   (:require [cljs.test :refer-macros [deftest testing is]]
-            [wish-engine.util :refer [eval-form eval-state]]))
+            [wish-engine.test-util :refer [eval-form eval-state]]))
 
 (deftest utils-test
   (testing "Ordinal"
@@ -85,10 +85,14 @@
                                                (provide-features
                                                  :rank/captain
 
-                                                 {:id :captain/sidearm}))}))
+                                                 {:id :captain/sidearm
+                                                  :name "Sidearm"}))}))
           state! (:! f)]
       (is (ifn? state!))
-      (is (= {:active-features {:rank/captain {:wish-engine/source :serenity}
-                                :captain/sidearm {:wish-engine/source :serenity}}
-              :declared-features {:captain/sidearm {:id :captain/sidearm}}}
+      (is (= {:active-features [{:id :rank/captain
+                                 :wish-engine/source :serenity}
+                                {:id :captain/sidearm
+                                 :wish-engine/source :serenity}]
+              :declared-features {:captain/sidearm {:id :captain/sidearm
+                                                    :name "Sidearm"}}}
              (state! {}))))))

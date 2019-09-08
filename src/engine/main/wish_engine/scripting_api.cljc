@@ -1,6 +1,7 @@
 (ns wish-engine.scripting-api
   "Public scripting API"
-  (:require [wish-engine.runtime.api :refer-macros [defn-api]]))
+  (:require [wish-engine.runtime.api :refer-macros [defn-api]]
+            [wish-engine.util :refer [conj-vec throw-msg]]))
 
 
 (def exported-fns {})
@@ -10,10 +11,6 @@
 
 
 ; ======= utils ===========================================
-
-(defn throw-msg [& message]
-  (throw #?(:cljs (js/Error. (apply str message))
-            :clj (Exception. (apply str message)))))
 
 (defn throw-arg
   ([fn-name arg] (throw-arg fn-name arg nil))
@@ -166,21 +163,26 @@
              (map? feature) (:id feature)
              (keyword? feature) feature
              :else (throw-arg "provide-feature" feature
-                              "feature ID or map"))
+                              "feature ID or map"))]
 
-        ; declare the feature on the entity state, if a map
-        state (if (map? feature)
-                (->> feature
-                     validate-feature-map
-                     compile-feature-map
-                     (assoc-in state [:declared-features id]))
+    (as-> state state
 
-                state)]
+      ; declare the feature on the entity state, if a map
+      (if-not (map? feature) state
+        (->> feature
+             validate-feature-map
+             compile-feature-map
+             (assoc-in state [:declared-features id])))
 
-    (assoc-in state [:active-features id]
-              (if-let [ctx *apply-context*]
-                {:wish-engine/source ctx}
-                true))))
+      ; install the feature
+      (update state :active-features conj-vec
+              (let [base {:id id}]
+                (if-let [ctx *apply-context*]
+                  (assoc base :wish-engine/source ctx)
+                  base)))
+
+      ; TODO apply any apply-fn
+      )))
 
 (defn-api provide-features [state & features]
   (loop [state state

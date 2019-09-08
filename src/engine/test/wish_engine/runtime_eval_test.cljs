@@ -1,6 +1,6 @@
 (ns wish-engine.runtime-eval-test
   (:require [cljs.test :refer-macros [deftest testing is]]
-            [wish-engine.util :refer [eval-form]]))
+            [wish-engine.test-util :refer [eval-form]]))
 
 (deftest basic-test
   (testing "let"

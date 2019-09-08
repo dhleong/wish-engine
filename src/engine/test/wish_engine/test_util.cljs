@@ -1,4 +1,4 @@
-(ns wish-engine.util
+(ns wish-engine.test-util
   (:require [wish-engine.core :refer [create-engine]]
             [wish-engine.model :as engine]))
 

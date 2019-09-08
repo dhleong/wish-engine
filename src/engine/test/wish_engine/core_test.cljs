@@ -1,6 +1,6 @@
 (ns wish-engine.core-test
   (:require [cljs.test :refer-macros [deftest testing is]]
-            [wish-engine.util :refer [eval-form]]))
+            [wish-engine.test-util :refer [eval-form]]))
 
 (deftest engine-test
   (testing "Basic compilation"
