@@ -9,7 +9,7 @@
   (testing "Basic math, fn interpolation"
     (is (= 42 (advanced-eval "(+ 20 22)")))
     (is (= true (advanced-eval "(not false)")))
-    #_(is (nil? (advanced-eval "(if (not true) 42)"))))
+    (is (nil? (advanced-eval "(if (not true) 42)"))))
 
   (testing "Macro expansion"
     (is (= 42 (advanced-eval "(when true 42)")))
@@ -34,3 +34,8 @@
              (str (f 9001))))
       (is (= (str :alliance)
              (str (f 0)))))))
+
+(deftest api-test
+  (testing "Scripting API"
+    (is (= "1st" (advanced-eval "(ordinal 1)")))
+    (is (= "3rd" (advanced-eval "(ordinal 3)")))))
