@@ -128,7 +128,8 @@
     ; in the cljs.core namespace. The code assumes that the cljs.core$macros
     ; namespace exists, but under advanced compilation it does *not*, by
     ; default. So, we make it happen.
-    (when-not cljs.core.NS_CACHE
+    (when-not (or js/goog.DEBUG
+                  cljs.core.NS_CACHE)
       (set! cljs.core.NS_CACHE
             (atom {'cljs.core$macros (cljs.core.Namespace.
                                        #js {}

@@ -19,10 +19,13 @@
                                {:id :serenity
                                 :! (fn [state]
                                      (assoc state :ran? true))}))
-          feature (get-in state [:features :serenity])]
-      (is (ifn? (:! feature)))
+          feature (get-in state [:features :serenity])
+          apply-fn (:! feature)]
+      (is (ifn? apply-fn))
+      (is (= {:wish-engine/source :serenity}
+             (meta apply-fn)))
       (is (= {:ran? true}
-             ((:! feature) {}))))))
+             (apply-fn {}))))))
 
 (deftest level-scaling-test
   (testing "Levels only"
@@ -36,7 +39,11 @@
                                                    4 {:! (on-state
                                                            (assoc :two? "no-longer"
                                                                   :four? true))}}}))
-          state! (comp #(dissoc % :level) (:! f))]
+          state!-base (:! f)
+          state! (comp #(dissoc % :level) state!-base)]
+      (is (= {:wish-engine/source :serenity}
+             (meta state!-base)))
+
       (is (empty? (state! {})))
       (is (empty? (state! {:level 1})))
 
@@ -66,6 +73,7 @@
                                                  {:id :captain/sidearm}))}))
           state! (:! f)]
       (is (ifn? state!))
-      (is (= {:feature-set #{:rank/captain :captain/sidearm}
+      (is (= {:active-features {:rank/captain {:wish-engine/source :serenity}
+                                :captain/sidearm {:wish-engine/source :serenity}}
               :declared-features {:captain/sidearm {:id :captain/sidearm}}}
              (state! {}))))))

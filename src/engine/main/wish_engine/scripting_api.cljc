@@ -6,6 +6,8 @@
 (def exported-fns {})
 
 (def ^:dynamic *engine-state* nil)
+(def ^:dynamic *apply-context* nil)
+
 
 ; ======= utils ===========================================
 
@@ -50,24 +52,36 @@
 ; ======= Compilation =====================================
 
 (defn compile-feature-map [m]
-  (cond-> m
-
+  (as-> m m
     ; add level-scaling to the :! fn
-    (:levels m)
-    (assoc :! (let [{existing-fn :! levels :levels} m ]
-                (fn apply-fn [state]
-                  (let [state (if existing-fn
-                                (existing-fn state)
-                                state)
-                        current-level (:level state)]
-                    (reduce-kv
-                      (fn [state level {level-fn :!}]
-                        (if (and (ifn? level-fn)
-                                 (>= current-level level))
-                          (level-fn state)
-                          state))
-                      state
-                      levels)))))))
+    (if-not (:levels m) m
+      (assoc m :! (let [{:keys [levels] existing-fn :!} m]
+                    (fn apply-fn [state]
+                      (let [state (if existing-fn
+                                    (existing-fn state)
+                                    state)
+                            current-level (:level state)]
+                        (reduce-kv
+                          (fn [state level {level-fn :!}]
+                            (if (and (ifn? level-fn)
+                                     (>= current-level level))
+                              (level-fn state)
+                              state))
+                          state
+                          levels))))))
+
+    ; wrap to provide *apply-context* so we can potentially track what
+    ; feature/option/etc provided what
+    (if-not (:! m) m
+      (update m :! (fn [existing-fn]
+                     (when existing-fn
+                       (vary-meta
+
+                         (fn apply-fn [state]
+                           (binding [*apply-context* (:id m)]
+                             (existing-fn state)))
+
+                         assoc :wish-engine/source (:id m))))))))
 
 
 ; ======= Util API ========================================
@@ -134,10 +148,10 @@
 
                 state)]
 
-    (update state :feature-set (fn [existing]
-                                 (if (set? existing)
-                                   (conj existing id)
-                                   #{id})))))
+    (assoc-in state [:active-features id]
+              (if-let [ctx *apply-context*]
+                {:wish-engine/source ctx}
+                true))))
 
 (defn-api provide-features [state & features]
   (loop [state state
