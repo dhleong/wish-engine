@@ -24,6 +24,36 @@
       (is (= {:ran? true}
              ((:! feature) {}))))))
 
+(deftest level-scaling-test
+  (testing "Levels only"
+    (let [{{f :serenity} :features} (eval-state
+                                      '(declare-features
+                                         {:id :serenity
+                                          :levels {2 {:! (on-state
+                                                           (assoc :two? true))}
+                                                   3 {:! (on-state
+                                                           (assoc :three? true))}
+                                                   4 {:! (on-state
+                                                           (assoc :two? "no-longer"
+                                                                  :four? true))}}}))
+          state! (comp #(dissoc % :level) (:! f))]
+      (is (empty? (state! {})))
+      (is (empty? (state! {:level 1})))
+
+      (is (= {:two? true}
+             (state! {:level 2})))
+
+      ; levels are additive
+      (is (= {:two? true
+              :three? true}
+             (state! {:level 3})))
+
+      ; levels are applied in order
+      (is (= {:two? "no-longer"
+              :three? true
+              :four? true}
+             (state! {:level 4}))))))
+
 (deftest provide-features-test
   (testing "Provide feature from :! fn"
     (let [{{f :serenity} :features} (eval-state

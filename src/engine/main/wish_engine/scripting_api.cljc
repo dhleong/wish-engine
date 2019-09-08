@@ -47,6 +47,29 @@
     m))
 
 
+; ======= Compilation =====================================
+
+(defn compile-feature-map [m]
+  (cond-> m
+
+    ; add level-scaling to the :! fn
+    (:levels m)
+    (assoc :! (let [{existing-fn :! levels :levels} m ]
+                (fn apply-fn [state]
+                  (let [state (if existing-fn
+                                (existing-fn state)
+                                state)
+                        current-level (:level state)]
+                    (reduce-kv
+                      (fn [state level {level-fn :!}]
+                        (if (and (ifn? level-fn)
+                                 (>= current-level level))
+                          (level-fn state)
+                          state))
+                      state
+                      levels)))))))
+
+
 ; ======= Util API ========================================
 
 (defn-api has?
@@ -83,6 +106,8 @@
          (->> features
 
               (flatten-lists "declare-features" map?)
+              (map validate-feature-map)
+              (map compile-feature-map)
 
               (reduce (fn [m f]
                         (assoc m (:id f) f))
@@ -102,9 +127,11 @@
 
         ; declare the feature on the entity state, if a map
         state (if (map? feature)
-                (assoc-in state
-                          [:declared-features id]
-                          (validate-feature-map feature))
+                (->> feature
+                     validate-feature-map
+                     compile-feature-map
+                     (assoc-in state [:declared-features id]))
+
                 state)]
 
     (update state :feature-set (fn [existing]
