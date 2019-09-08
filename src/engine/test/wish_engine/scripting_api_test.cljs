@@ -23,3 +23,19 @@
       (is (ifn? (:! feature)))
       (is (= {:ran? true}
              ((:! feature) {}))))))
+
+(deftest provide-features-test
+  (testing "Provide feature from :! fn"
+    (let [{{f :serenity} :features} (eval-state
+                                      '(declare-features
+                                         {:id :serenity
+                                          :! (on-state
+                                               (provide-features
+                                                 :rank/captain
+
+                                                 {:id :captain/sidearm}))}))
+          state! (:! f)]
+      (is (ifn? state!))
+      (is (= {:feature-set #{:rank/captain :captain/sidearm}
+              :declared-features {:captain/sidearm {:id :captain/sidearm}}}
+             (state! {}))))))
