@@ -27,6 +27,24 @@
       (is (= {:ran? true}
              (apply-fn {}))))))
 
+(deftest declare-items-test
+  (testing "Merge item item defs"
+    (let [state (eval-state '(declare-items
+                               {:type :weapon
+                                :attrs {:subtype :gun}
+                                :ammunition [1 2]}
+
+                               {:id :gun/pistol
+                                :attrs {:laser? true}
+                                :ammunition [3 4]}))]
+      (is (= {:id :gun/pistol
+              :ammunition [1 2 3 4]
+              :attrs {:subtype :gun
+                      :laser? true}
+              :type :weapon}
+
+             (get-in state [:items :gun/pistol]))))))
+
 (deftest declare-options-test
   (testing "Add options to state"
     (let [state (eval-state '(declare-options

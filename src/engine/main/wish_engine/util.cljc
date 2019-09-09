@@ -20,6 +20,19 @@
   (or (get-in state [:declared-features id])
       (get-in state [:wish-engine/state :features id])))
 
+(defn merge-item-spec [base item]
+  (merge-with
+    (fn [a b]
+      (cond
+        (map? a)
+        (merge a b)
+
+        (coll? a)
+        (concat a b)
+
+        :else b))
+    base item))
+
 (defn- option-by-id [state feature option-id]
   (or (some->> feature
                :values

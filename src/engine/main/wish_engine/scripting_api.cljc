@@ -149,6 +149,11 @@
 (defn-api declare-features [& features]
   (declare-toplevel "declare-features" [:features] features))
 
+(defn-api declare-items [base & items]
+  (declare-toplevel "declare-items" [:items]
+                    (map (partial util/merge-item-spec base)
+                         items)))
+
 (defn-api declare-options [feature-id & options]
   (when-not (keyword? feature-id)
     (throw-arg "declare-options" feature-id
