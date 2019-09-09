@@ -184,7 +184,7 @@
 
 (deftest add-to-list-test
   (testing "Simple list creation"
-    (let [state (eval-state '(add-to-list
+    (let [state (eval-state '(declare-list
                                :crew
                                [{:id :mreynolds}
                                 {:id :zoe}
@@ -197,12 +197,12 @@
   (testing "add items by id"
     (let [state (eval-state '(do
                                ; list entity
-                               (add-to-list
+                               (declare-list
                                  :people
-                                 [{:id :mreynolds}])
+                                 {:id :mreynolds})
 
                                ; feature list
-                               (add-to-list
+                               (declare-list
                                  {:id :soldiers
                                   :type :feature}
                                  [{:id :zoe}])
@@ -211,7 +211,7 @@
                                (declare-features
                                  {:id :mechanic/itskaylee})
 
-                               (add-to-list
+                               (declare-list
                                 :crew
                                 [(by-id :mreynolds)
                                  (by-id :zoe)
@@ -224,15 +224,15 @@
   (testing "add items from list by id"
     (let [state (eval-state '(do
                                ; list entity
-                               (add-to-list
+                               (declare-list
                                  :people
-                                 [{:id :mreynolds}
-                                  {:id :zoe}
-                                  {:id :itskaylee}])
+                                 {:id :mreynolds}
+                                 {:id :zoe}
+                                 {:id :itskaylee})
 
-                               (add-to-list
+                               (declare-list
                                 :crew
-                                [(items-from-list :people)])))]
+                                (items-from-list :people))))]
       (is (= [{:id :mreynolds}
               {:id :zoe}
               {:id :itskaylee}]
@@ -250,9 +250,9 @@
                                  :people
                                  {:id :itskaylee})
 
-                               (add-to-list
+                               (declare-list
                                 :crew
-                                [(options-of :people)])))]
+                                (options-of :people))))]
       (is (= [{:id :itskaylee}
               {:id :zoe}
               {:id :mreynolds}]

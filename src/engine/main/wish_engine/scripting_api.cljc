@@ -29,8 +29,10 @@
   [fn-name valid? args]
   (mapcat (fn [f]
             (cond
-              (valid? f) [f]
-              (sequential? f) f
+              (and (sequential? f)
+                   (every? valid? f)) f
+              (and (not (sequential? f))
+                   (valid? f)) [f]
               :else (throw-arg fn-name f)))
           args))
 
@@ -325,6 +327,7 @@
                      (get-in state [:wish-engine/state :lists list-id]))
              seq
              (mapcat (fn [entry]
+                       (println "entry=" entry)
                        (when-let [results (if (fn? entry)
                                             (entry state)
                                             entry)]
@@ -370,47 +373,45 @@
       (util/selected-options state f)
       (js/console.warn "Could not find feature: " feature-id))))
 
-; TODO let's split this into declare-list and add-to-list after all,
-; so we can use variadic syntax like every other API
+(defn- add-to-list*
+  [state fn-name id-or-spec entries]
+  (let [id (if (keyword? id-or-spec)
+             id-or-spec
+             (:id id-or-spec))
+        spec (when (map? id-or-spec)
+               (dissoc id-or-spec :id))
+        dest-key (if (= :feature (:type spec))
+                   :features
+                   :list-entities)
+        entries (flatten-lists fn-name identity entries)
+        dest-entries (if (= :feature (:type spec))
+                       (->> entries
+                            (filter map?)
+                            (map (comp compile-feature-map validate-feature-map)))
+                       entries)
+        inflatable-entries (map (fn [e]
+                                  (cond
+                                    (map? e) (by-id (:id e))
+                                    (ifn? e) e  ; easy case
+                                    (keyword? e) (by-id e)
+                                    :else (throw-arg fn-name e
+                                                     (str "id, map, or functional"
+                                                          "; was " (or (type e)
+                                                                       "nil")))))
+                                entries)]
+
+    (-> state
+        (update dest-key merge (->map dest-entries))
+        (update-in [:lists id] concat inflatable-entries))))
+
 (defn-api add-to-list
-  ([id-or-spec entries]
-   (if-let [state *engine-state*]
-     (swap! state add-to-list id-or-spec entries)
+  [state id-or-spec & entries]
+  (when *engine-state*
+    (throw-msg "add-to-list must not be called at the top level. Try `declare-list`"))
 
-     (throw-arg "add-to-list" id-or-spec
-                "state argument missing for non-top-level invocation")))
+  (add-to-list* state "add-to-list" id-or-spec entries))
 
-  ([state id-or-spec entries]
-   (when-not (sequential? entries)
-     (throw-arg (str "add-to-list (" id-or-spec ")") entries
-                "entries must be a list or vector"))
-
-   (let [id (if (keyword? id-or-spec)
-              id-or-spec
-              (:id id-or-spec))
-         spec (when (map? id-or-spec)
-                (dissoc id-or-spec :id))
-         dest-key (if (= :feature (:type spec))
-                    :features
-                    :list-entities)
-         dest-entries (if (= :feature (:type spec))
-                        (->> entries
-                             (filter map?)
-                             (map (comp compile-feature-map validate-feature-map)))
-                        entries)
-         inflatable-entries (map (fn [e]
-                                   (cond
-                                     (map? e) (by-id (:id e))
-                                     (ifn? e) e  ; easy case
-                                     (keyword? e) (by-id e)
-                                     :else (throw-arg "add-to-list" e
-                                                      (str "id, map, or functional"
-                                                           "; was " (or (type e)
-                                                                        "nil")))))
-                                 entries)]
-
-     (-> state
-         (update dest-key merge (->map dest-entries))
-         (update-in [:lists id] concat inflatable-entries)))))
-
-
+(defn-api declare-list [id-or-spec & entries]
+  (when-not *engine-state*
+    (throw-msg "declare-list must be called at the top level. Try `add-to-list`"))
+  (swap! *engine-state* add-to-list* "declare-list" id-or-spec entries))
