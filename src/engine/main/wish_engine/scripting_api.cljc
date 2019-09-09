@@ -166,6 +166,12 @@
 (defn-api declare-race [race-spec]
   (declare-toplevel "declare-race" [:races] [race-spec]))
 
+(defn-api declare-subrace [parent-race-id race-spec]
+  (when-not (keyword? parent-race-id)
+    (throw-arg "declare-subrace" parent-race-id
+               "parent race id keyword"))
+  (declare-toplevel "declare-race" [:subraces parent-race-id] [race-spec]))
+
 
 ; ======= Entity-modifying forms ==========================
 
