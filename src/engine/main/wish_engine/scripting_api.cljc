@@ -325,9 +325,9 @@
                      (get-in state [:wish-engine/state :lists list-id]))
              seq
              (mapcat (fn [entry]
-                       (let [results (if (fn? entry)
-                                       (entry state)
-                                       entry)]
+                       (when-let [results (if (fn? entry)
+                                            (entry state)
+                                            entry)]
                          (if (sequential? results)
                            results
                            [results])))))))
@@ -340,7 +340,7 @@
     (throw-arg "by-id" id
                "entity id keyword"))
 
-  (fn ^:single entity-by-id [state]
+  (fn entity-by-id [state]
     (or (get-in state [:list-entities id])
         (get-in state [:features id])
         (js/console.warn "Could not find entity with ID " id))))
@@ -363,8 +363,15 @@
   [feature-id]
   (when-not (keyword? feature-id)
     (throw-arg "options-of" feature-id
-               "list id keyword")))
+               "list id keyword"))
 
+  (fn feature-options-by-id [state]
+    (if-let [f (util/feature-by-id state feature-id)]
+      (util/selected-options state f)
+      (js/console.warn "Could not find feature: " feature-id))))
+
+; TODO let's split this into declare-list and add-to-list after all,
+; so we can use variadic syntax like every other API
 (defn-api add-to-list
   ([id-or-spec entries]
    (if-let [state *engine-state*]
@@ -397,7 +404,9 @@
                                      (ifn? e) e  ; easy case
                                      (keyword? e) (by-id e)
                                      :else (throw-arg "add-to-list" e
-                                                      "id, map, or functional")))
+                                                      (str "id, map, or functional"
+                                                           "; was " (or (type e)
+                                                                        "nil")))))
                                  entries)]
 
      (-> state

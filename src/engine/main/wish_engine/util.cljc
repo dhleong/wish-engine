@@ -39,7 +39,8 @@
                (filter #(= option-id (:id %)))
                first)
 
-      (get-in state [:options (:id feature) option-id])))
+      (get-in state [:options (:id feature) option-id])
+      (get-in state [:wish-engine/state :options (:id feature) option-id])))
 
 (defn selected-options [state feature]
   (let [option-ids (get-in state [:wish-engine/options (:id feature)])]

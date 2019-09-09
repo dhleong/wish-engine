@@ -238,5 +238,25 @@
               {:id :itskaylee}]
              (api/inflate-list state :crew)))))
 
-  (testing "add items from feature option")
-  )
+  (testing "add items from feature option"
+    (let [state (eval-state '(do
+                               ; list entity
+                               (declare-features
+                                 {:id :people
+                                  :values [{:id :mreynolds}
+                                           {:id :zoe}]})
+
+                               (declare-options
+                                 :people
+                                 {:id :itskaylee})
+
+                               (add-to-list
+                                :crew
+                                [(options-of :people)])))]
+      (is (= [{:id :itskaylee}
+              {:id :zoe}
+              {:id :mreynolds}]
+             (api/inflate-list
+               {:wish-engine/options {:people [:itskaylee :zoe :mreynolds]}
+                :wish-engine/state state}
+               :crew))))))
