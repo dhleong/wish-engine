@@ -8,6 +8,9 @@
 
 (def ^:dynamic *engine-state* nil)
 (def ^:dynamic *apply-context* nil)
+(def ^{:dynamic true
+       :private true}
+  *list-inflation-context* nil)
 
 
 ; ======= utils ===========================================
@@ -27,13 +30,18 @@
   (mapcat (fn [f]
             (cond
               (valid? f) [f]
-              (seq? f) f
+              (sequential? f) f
               :else (throw-arg fn-name f)))
           args))
 
 (def ^:private key-or-map? #(or (keyword? %)
                                 (map? %)))
 
+(defn- ->map [entities]
+  (reduce (fn [m f]
+            (assoc m (:id f) f))
+          {}
+          entities))
 
 ; ======= Validation ======================================
 
@@ -173,9 +181,7 @@
               (map validate-feature-map)
               (map compile-feature-map)
 
-              (reduce (fn [m f]
-                        (assoc m (:id f) f))
-                      {}))))
+              ->map)))
 
 (defn-api declare-class [class-spec]
   (declare-toplevel "declare-class" [:classes] [class-spec]))
@@ -306,3 +312,96 @@
       (recur (provide-feature state f)
              (rest features))
       state)))
+
+
+; ======= list handling ===================================
+
+(defn inflate-list [state list-id]
+  (when (= list-id *list-inflation-context*)
+    (throw-msg "Infinite recursion detected: inflating " list-id))
+
+  (binding [*list-inflation-context* list-id]
+    (some->> (concat (get-in state [:lists list-id])
+                     (get-in state [:wish-engine/state :lists list-id]))
+             seq
+             (mapcat (fn [entry]
+                       (let [results (if (fn? entry)
+                                       (entry state)
+                                       entry)]
+                         (if (sequential? results)
+                           results
+                           [results])))))))
+
+(defn-api by-id
+  "Given an ID, returns a function of `state` that will fetch
+   the feature (or list item) with that ID"
+  [id]
+  (when-not (keyword? id)
+    (throw-arg "by-id" id
+               "entity id keyword"))
+
+  (fn ^:single entity-by-id [state]
+    (or (get-in state [:list-entities id])
+        (get-in state [:features id])
+        (js/console.warn "Could not find entity with ID " id))))
+
+(defn-api items-from-list
+  "Given a list ID, returns a function of `state` that will fetch
+   the items from that list"
+  [list-id]
+  (when-not (keyword? list-id)
+    (throw-arg "items-from-list" list-id
+               "list id keyword"))
+
+  (fn list-items-by-id [state]
+    (or (inflate-list state list-id)
+        (js/console.warn "Could not find list with ID " list-id))))
+
+(defn-api options-of
+  "Given a feature ID, returns a function of `state` that fetches the
+   selected options of that feature"
+  [feature-id]
+  (when-not (keyword? feature-id)
+    (throw-arg "options-of" feature-id
+               "list id keyword")))
+
+(defn-api add-to-list
+  ([id-or-spec entries]
+   (if-let [state *engine-state*]
+     (swap! state add-to-list id-or-spec entries)
+
+     (throw-arg "add-to-list" id-or-spec
+                "state argument missing for non-top-level invocation")))
+
+  ([state id-or-spec entries]
+   (when-not (sequential? entries)
+     (throw-arg (str "add-to-list (" id-or-spec ")") entries
+                "entries must be a list or vector"))
+
+   (let [id (if (keyword? id-or-spec)
+              id-or-spec
+              (:id id-or-spec))
+         spec (when (map? id-or-spec)
+                (dissoc id-or-spec :id))
+         dest-key (if (= :feature (:type spec))
+                    :features
+                    :list-entities)
+         dest-entries (if (= :feature (:type spec))
+                        (->> entries
+                             (filter map?)
+                             (map (comp compile-feature-map validate-feature-map)))
+                        entries)
+         inflatable-entries (map (fn [e]
+                                   (cond
+                                     (map? e) (by-id (:id e))
+                                     (ifn? e) e  ; easy case
+                                     (keyword? e) (by-id e)
+                                     :else (throw-arg "add-to-list" e
+                                                      "id, map, or functional")))
+                                 entries)]
+
+     (-> state
+         (update dest-key merge (->map dest-entries))
+         (update-in [:lists id] concat inflatable-entries)))))
+
+

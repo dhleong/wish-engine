@@ -1,6 +1,7 @@
 (ns wish-engine.scripting-api-test
   (:require [cljs.test :refer-macros [deftest testing is]]
-            [wish-engine.test-util :refer [eval-form eval-state]]))
+            [wish-engine.test-util :refer [eval-form eval-state]]
+            [wish-engine.scripting-api :as api]))
 
 (deftest utils-test
   (testing "Ordinal"
@@ -177,3 +178,65 @@
                (:attrs inflated)))
         (is (= {:sidearm {:pistol {:wish-engine/source :pistol}}}
                (:attrs/meta inflated)))))))
+
+
+; ======= list handling ===================================
+
+(deftest add-to-list-test
+  (testing "Simple list creation"
+    (let [state (eval-state '(add-to-list
+                               :crew
+                               [{:id :mreynolds}
+                                {:id :zoe}
+                                {:id :itskaylee}]))]
+      (is (= [{:id :mreynolds}
+              {:id :zoe}
+              {:id :itskaylee}]
+             (api/inflate-list state :crew)))))
+
+  (testing "add items by id"
+    (let [state (eval-state '(do
+                               ; list entity
+                               (add-to-list
+                                 :people
+                                 [{:id :mreynolds}])
+
+                               ; feature list
+                               (add-to-list
+                                 {:id :soldiers
+                                  :type :feature}
+                                 [{:id :zoe}])
+
+                               ; declared feature
+                               (declare-features
+                                 {:id :mechanic/itskaylee})
+
+                               (add-to-list
+                                :crew
+                                [(by-id :mreynolds)
+                                 (by-id :zoe)
+                                 (by-id :mechanic/itskaylee)])))]
+      (is (= [{:id :mreynolds}
+              {:id :zoe}
+              {:id :mechanic/itskaylee}]
+             (api/inflate-list state :crew)))))
+
+  (testing "add items from list by id"
+    (let [state (eval-state '(do
+                               ; list entity
+                               (add-to-list
+                                 :people
+                                 [{:id :mreynolds}
+                                  {:id :zoe}
+                                  {:id :itskaylee}])
+
+                               (add-to-list
+                                :crew
+                                [(items-from-list :people)])))]
+      (is (= [{:id :mreynolds}
+              {:id :zoe}
+              {:id :itskaylee}]
+             (api/inflate-list state :crew)))))
+
+  (testing "add items from feature option")
+  )
