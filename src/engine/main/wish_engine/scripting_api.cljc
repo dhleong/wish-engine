@@ -146,6 +146,9 @@
 (defn-api declare-class [class-spec]
   (declare-toplevel "declare-class" [:classes] [class-spec]))
 
+(defn-api declare-effects [& effects]
+  (declare-toplevel "declare-effects" [:effects] effects))
+
 (defn-api declare-features [& features]
   (declare-toplevel "declare-features" [:features] features))
 
