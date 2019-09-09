@@ -46,8 +46,25 @@
     (when-not (:id m)
       (throw-reason "missing :id"))
 
-    ; return m if valid
+    ; return if valid
     m))
+
+(defn validate-limited-use-spec [s]
+  (letfn [(throw-reason [& args]
+            (throw-msg "Invalid limited-use ("
+                       (apply str args)
+                       "):\n"
+                       s))]
+    (when-not (:id s)
+      (throw-reason "missing :id"))
+
+    (when-let [amount (:restore-amount s)]
+      (when-not (or (number? amount)
+                    (ifn? amount))
+        (throw-reason ":restore-amount must be a number or a fn")))
+
+    ; return if valid
+    s))
 
 
 ; ======= Compilation =====================================
@@ -98,6 +115,23 @@
                              (existing-fn state)))
 
                          assoc :wish-engine/source (:id m))))))))
+
+(defn compile-limited-use-spec [s]
+  (as-> s s
+
+    ; ensure :restore-amount is always a fn
+    (if (ifn? (:restore-amount s)) s
+      ;; if not provided, restore all
+      (update s :restore-amount (fn [original]
+                                  (cond
+                                    ;; constant restore amount
+                                    (number? original)
+                                    (constantly original)
+
+                                    ;; restore all if not otherwise specified
+                                    (nil? original)
+                                    (fn restore-all [{:keys [used]}]
+                                      used)))))))
 
 
 ; ======= Util API ========================================
@@ -174,6 +208,21 @@
 
 
 ; ======= Entity-modifying forms ==========================
+
+;;;
+;;; Limited use
+;;;
+
+(defn-api add-limited-use [state spec]
+  (when *engine-state*
+    (throw-msg "add-limited-use must not be called at the top level."))
+
+  (update state :limited-uses
+          assoc (:id spec)
+          (->> spec
+               validate-limited-use-spec
+               compile-limited-use-spec)))
+
 
 ;;;
 ;;; Provide attr

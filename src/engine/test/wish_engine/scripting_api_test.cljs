@@ -87,6 +87,36 @@
               :four? true}
              (state! {:level 4}))))))
 
+(deftest limited-use-test
+  (testing "Provide default :restore-amount"
+    (let [{{f :serenity} :features} (eval-state
+                                      '(declare-features
+                                         {:id :serenity
+                                          :! (on-state
+                                               (add-limited-use
+                                                 {:id :fuel#uses
+                                                  :name "Fuel"}))}))
+          state! (:! f)
+          s (state! {})
+          limited-use (get-in s [:limited-uses :fuel#uses])]
+      (is (ifn? (:restore-amount limited-use)))
+      (is (= 42 ((:restore-amount limited-use) {:used 42})))))
+
+  (testing "Support constant :restore-amount"
+    (let [{{f :serenity} :features} (eval-state
+                                      '(declare-features
+                                         {:id :serenity
+                                          :! (on-state
+                                               (add-limited-use
+                                                 {:id :fuel#uses
+                                                  :name "Fuel"
+                                                  :restore-amount 2}))}))
+          state! (:! f)
+          s (state! {})
+          limited-use (get-in s [:limited-uses :fuel#uses])]
+      (is (ifn? (:restore-amount limited-use)))
+      (is (= 2 ((:restore-amount limited-use) {:used 42}))))))
+
 (deftest provide-attr-test
   (testing "Provide attrs from :! fn"
     (let [{{f :serenity} :features} (eval-state
