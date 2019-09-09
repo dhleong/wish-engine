@@ -1,7 +1,7 @@
 (ns wish-engine.scripting-api
   "Public scripting API"
   (:require [wish-engine.runtime.api :refer-macros [defn-api]]
-            [wish-engine.util :refer [conj-vec feature-by-id throw-msg]]))
+            [wish-engine.util :as util :refer [conj-vec throw-msg]]))
 
 
 (def exported-fns {})
@@ -71,6 +71,21 @@
                           state
                           levels))))))
 
+    (if-not (:values m) m
+      (update m :values
+              (partial map (fn [option]
+                             (cond
+                               (map? option)
+                               (compile-feature-map option)
+
+                               (keyword? option)
+                               option
+
+                               :else
+                               (throw-msg "Invalid :value option to "
+                                          (:id m)
+                                          ": " option))))))
+
     ; wrap to provide *apply-context* so we can potentially track what
     ; feature/option/etc provided what
     (if-not (:! m) m
@@ -109,24 +124,33 @@
 
 ; ======= top-level forms =================================
 
-(defn-api declare-features [& features]
+(defn- declare-toplevel [fn-name path features]
   (when-not *engine-state*
-    (throw-msg "declare-features must be called at the top level"))
+    (throw-msg fn-name " must be called at the top level"))
 
   (swap! *engine-state*
-         update
-         :features
+         update-in
+         path
          merge
 
          (->> features
 
-              (flatten-lists "declare-features" map?)
+              (flatten-lists fn-name map?)
               (map validate-feature-map)
               (map compile-feature-map)
 
               (reduce (fn [m f]
                         (assoc m (:id f) f))
                       {}))))
+
+(defn-api declare-features [& features]
+  (declare-toplevel "declare-features" [:features] features))
+
+(defn-api declare-options [feature-id & options]
+  (when-not (keyword? feature-id)
+    (throw-arg "declare-options" feature-id
+               "feature id keyword"))
+  (declare-toplevel "declare-options" [:options feature-id] options))
 
 
 ; ======= Entity-modifying forms ==========================
@@ -148,7 +172,9 @@
         state (assoc-in state (cons :attrs attr-path) value)]
 
     (if-let [context *apply-context*]
-      (assoc-in state (cons :attrs/meta attr-path) {:wish-engine/source context})
+      (assoc-in state
+                (cons :attrs/meta attr-path)
+                {:wish-engine/source context})
       state)))
 
 ;;;
@@ -163,16 +189,20 @@
              (map? feature) (:id feature)
              (keyword? feature) feature
              :else (throw-arg "provide-feature" feature
-                              "feature ID or map"))]
+                              "feature ID or map"))
+        declared-inline? (map? feature)
+
+        feature (if declared-inline?
+                  (->> feature
+                       validate-feature-map
+                       compile-feature-map)
+                  (util/feature-by-id state id))]
 
     (as-> state state
 
       ; declare the feature on the entity state, if a map
-      (if-not (map? feature) state
-        (->> feature
-             validate-feature-map
-             compile-feature-map
-             (assoc-in state [:declared-features id])))
+      (if-not declared-inline? state
+        (assoc-in state [:declared-features id] feature))
 
       ; install the feature
       (update state :active-features conj-vec
@@ -182,10 +212,19 @@
                   base)))
 
       ; apply any apply-fn
-      (if-let [apply-fn (if (map? feature)
-                          (:! feature)
-                          (:! (feature-by-id state id)))]
+      (if-let [apply-fn (:! feature)]
         (apply-fn state)
+        state)
+
+      ; apply options
+      (if-let [selected-options (util/selected-options state feature)]
+        (reduce
+          (fn [s option]
+            (if-let [apply-fn (:! option)]
+              (apply-fn s)
+              s))
+          state
+          selected-options)
         state))))
 
 (defn-api provide-features [state & features]

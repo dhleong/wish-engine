@@ -27,6 +27,14 @@
       (is (= {:ran? true}
              (apply-fn {}))))))
 
+(deftest declare-options-test
+  (testing "Add options to state"
+    (let [state (eval-state '(declare-options
+                               :ship
+                               {:id :serenity}))]
+      (is (= {:options {:ship {:serenity {:id :serenity}}}}
+             state)))))
+
 (deftest level-scaling-test
   (testing "Levels only"
     (let [{{f :serenity} :features} (eval-state
@@ -95,4 +103,29 @@
                                  :wish-engine/source :serenity}]
               :declared-features {:captain/sidearm {:id :captain/sidearm
                                                     :name "Sidearm"}}}
-             (state! {}))))))
+             (state! {})))))
+
+  (testing "Apply inline options"
+    (let [{{f :serenity} :features} (eval-state
+                                      '(declare-features
+                                         {:id :serenity
+                                          :! (on-state
+                                               (provide-features
+                                                 {:id :captain/sidearm
+                                                  :name "Sidearm"
+                                                  :values
+                                                  [{:id :pistol
+                                                    :! (on-state
+                                                         (provide-attr
+                                                           [:sidearm :pistol]
+                                                           true))}]}))}))
+          state! (:! f)]
+      (is (ifn? state!))
+      (is (empty? (:attrs (state! {}))))
+
+      (let [inflated (state! {:wish-engine/options
+                              {:captain/sidearm [:pistol]}})]
+        (is (= {:sidearm {:pistol true}}
+               (:attrs inflated)))
+        (is (= {:sidearm {:pistol {:wish-engine/source :pistol}}}
+               (:attrs/meta inflated)))))))
