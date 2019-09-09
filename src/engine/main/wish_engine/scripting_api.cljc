@@ -143,6 +143,9 @@
                         (assoc m (:id f) f))
                       {}))))
 
+(defn-api declare-class [class-spec]
+  (declare-toplevel "declare-class" [:classes] [class-spec]))
+
 (defn-api declare-features [& features]
   (declare-toplevel "declare-features" [:features] features))
 
@@ -151,6 +154,9 @@
     (throw-arg "declare-options" feature-id
                "feature id keyword"))
   (declare-toplevel "declare-options" [:options feature-id] options))
+
+(defn-api declare-race [race-spec]
+  (declare-toplevel "declare-race" [:races] [race-spec]))
 
 
 ; ======= Entity-modifying forms ==========================
