@@ -6,8 +6,8 @@
             [cljs.js :as cljs :refer [empty-state js-eval]]
             [wish-engine.model :refer [WishEngine]]
             [wish-engine.runtime.config :as config]
-            [wish-engine.runtime-eval :refer [exported-fns exported-macros]]
-            [wish-engine.scripting-api :as api]))
+            [wish-engine.runtime.state :refer [*engine-state*]]
+            [wish-engine.runtime-eval :refer [exported-fns exported-macros]]))
 
 
 ; ======= Consts ==========================================
@@ -176,7 +176,7 @@
   (parse-string [this s]
     (edn/read-string s #_(str "(do " s ")")))
   (eval-source-form [this state form]
-    (binding [api/*engine-state* state]
+    (binding [*engine-state* state]
       (eval-form this form))))
 
 (defn create-engine []

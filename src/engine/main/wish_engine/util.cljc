@@ -4,6 +4,13 @@
   (throw #?(:cljs (js/Error. (apply str message))
             :clj (Exception. (apply str message)))))
 
+(defn throw-arg
+  ([fn-name arg] (throw-arg fn-name arg nil))
+  ([fn-name arg reason-str]
+   (let [reason (when reason-str
+                  (str " (" reason-str ")"))]
+     (throw-msg fn-name ": Invalid argument" reason ":\n" arg))))
+
 (defn conj-vec [coll v]
   (cond
     (vector? coll)

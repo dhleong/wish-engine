@@ -1,26 +1,19 @@
 (ns wish-engine.scripting-api
   "Public scripting API"
   (:require [wish-engine.runtime.api :refer-macros [defn-api]]
-            [wish-engine.util :as util :refer [conj-vec throw-msg]]))
+            [wish-engine.runtime.state :refer [*engine-state* *apply-context*]]
+            [wish-engine.util :as util :refer [throw-arg throw-msg]]
+            [wish-engine.api.features :as features]))
 
 
 (def exported-fns {})
 
-(def ^:dynamic *engine-state* nil)
-(def ^:dynamic *apply-context* nil)
 (def ^{:dynamic true
        :private true}
   *list-inflation-context* nil)
 
 
 ; ======= utils ===========================================
-
-(defn throw-arg
-  ([fn-name arg] (throw-arg fn-name arg nil))
-  ([fn-name arg reason-str]
-   (let [reason (when reason-str
-                  (str " (" reason-str ")"))]
-     (throw-msg fn-name ": Invalid argument" reason ":\n" arg))))
 
 (defn flatten-lists
   "Call on a varargs list to support both the usual varargs invocation and
@@ -47,18 +40,6 @@
 
 ; ======= Validation ======================================
 
-(defn validate-feature-map [m]
-  (letfn [(throw-reason [& args]
-            (throw-msg "Invalid feature ("
-                       (apply str args)
-                       "):\n"
-                       m))]
-    (when-not (:id m)
-      (throw-reason "missing :id"))
-
-    ; return if valid
-    m))
-
 (defn validate-limited-use-spec [s]
   (letfn [(throw-reason [& args]
             (throw-msg "Invalid limited-use ("
@@ -78,53 +59,6 @@
 
 
 ; ======= Compilation =====================================
-
-(defn compile-feature-map [m]
-  (as-> m m
-    ; add level-scaling to the :! fn
-    (if-not (:levels m) m
-      (assoc m :! (let [{:keys [levels] existing-fn :!} m]
-                    (fn apply-fn [state]
-                      (let [state (if existing-fn
-                                    (existing-fn state)
-                                    state)
-                            current-level (:level state)]
-                        (reduce-kv
-                          (fn [state level {level-fn :!}]
-                            (if (and (ifn? level-fn)
-                                     (>= current-level level))
-                              (level-fn state)
-                              state))
-                          state
-                          levels))))))
-
-    (if-not (:values m) m
-      (update m :values
-              (partial map (fn [option]
-                             (cond
-                               (map? option)
-                               (compile-feature-map option)
-
-                               (keyword? option)
-                               option
-
-                               :else
-                               (throw-msg "Invalid :value option to "
-                                          (:id m)
-                                          ": " option))))))
-
-    ; wrap to provide *apply-context* so we can potentially track what
-    ; feature/option/etc provided what
-    (if-not (:! m) m
-      (update m :! (fn [existing-fn]
-                     (when existing-fn
-                       (vary-meta
-
-                         (fn apply-fn [state]
-                           (binding [*apply-context* (:id m)]
-                             (existing-fn state)))
-
-                         assoc :wish-engine/source (:id m))))))))
 
 (defn compile-limited-use-spec [s]
   (as-> s s
@@ -180,8 +114,8 @@
          (->> features
 
               (flatten-lists fn-name map?)
-              (map validate-feature-map)
-              (map compile-feature-map)
+              (map features/validate-map)
+              (map features/compile-map)
 
               ->map)))
 
@@ -262,81 +196,7 @@
   (when *engine-state*
     (throw-msg "provide-feature(s) must not be called at the top level. Try `declare-features`"))
 
-  (let [id (cond
-             (map? feature) (:id feature)
-             (keyword? feature) feature
-             :else (throw-arg "provide-feature" feature
-                              "feature ID or map"))
-        declared-inline? (map? feature)
-
-        feature (if declared-inline?
-                  (->> feature
-                       validate-feature-map
-                       compile-feature-map)
-                  (util/feature-by-id state id))
-
-        ; prepare for instancing
-        instanced? (:instanced? feature)
-        next-instance (get-in state [:wish/instances id] 0)
-        with-instance (if-not instanced? feature
-                        (assoc feature
-                               :wish/instance next-instance
-                               :wish/instance-id (util/instance-id
-                                                   (:id feature)
-                                                   (:id state)
-                                                   next-instance)))
-
-        ; inflate selected options
-        selected-options (util/selected-options state with-instance)]
-
-    (when (and (not instanced?)
-               (> next-instance 0))
-      (js/console.warn "Adding duplicate feature " id
-                       " from " *apply-context*
-                       " but it is not instanced"))
-
-    (as-> state state
-
-      ; declare the feature on the entity state, if a map
-      (if-not declared-inline? state
-        (assoc-in state [:declared-features id] feature))
-
-      (update-in state [:wish/instances id] inc)
-
-      ; install the feature
-      (update state :active-features conj-vec
-              (as-> {:id id} instance
-
-                ; attach the context
-                (if-let [ctx *apply-context*]
-                  (assoc instance :wish-engine/source ctx)
-                  instance)
-
-                ; attach selected-options
-                (if-not selected-options instance
-                  (assoc instance
-                         :wish-engine/selected-options selected-options))
-
-                ; attach instance info
-                (if-not instanced? instance
-                  (merge (select-keys with-instance [:wish/instance
-                                                     :wish/instance-id])
-                         instance))))
-
-      ; apply any apply-fn
-      (if-let [apply-fn (:! feature)]
-        (apply-fn state)
-        state)
-
-      ; apply options
-      (if-not selected-options state
-        (reduce
-          (fn [s option]
-            (if-let [apply-fn (:! option)]
-              (apply-fn s)
-              s))
-          state
-          selected-options)))))
+  (features/provide *apply-context* state feature))
 
 (defn-api provide-features [state & features]
   (loop [state state
@@ -420,7 +280,8 @@
         dest-entries (if (= :feature (:type spec))
                        (->> entries
                             (filter map?)
-                            (map (comp compile-feature-map validate-feature-map)))
+                            (map (comp features/compile-map
+                                       features/validate-map)))
                        entries)
         inflatable-entries (map (fn [e]
                                   (cond
