@@ -65,13 +65,21 @@
                        (if (keyword? fn-call)
                          (apply ->kw-get sym)
 
-                         (condp = fn-call
-                           'wish-engine.runtime/exported-some
-                           (when (set? (second sym))
-                             (->has? (rest sym)))
+                         (or (condp = fn-call
+                               'wish-engine.runtime/exported-some
+                               (when (set? (second sym))
+                                 (->has? (rest sym)))
 
-                           ; else, fall through:
-                           nil))))
+                               ; else, fall through:
+                               nil)
+
+                             (when (and (nil? (namespace fn-call))
+                                        (not (contains? exported-fns fn-call))
+                                        (not (#{'fn* 'do 'try} fn-call)))
+                               `(~(config/with-exported-ns 'try-unsafe)
+                                  ~(str fn-call)
+                                  ~(str sym)
+                                  (fn* [] ~sym)))))))
 
                    ; just return unchanged
                    sym)]
@@ -103,9 +111,14 @@
                    (try
                      (js-eval src)
                      (catch :default e
-                       (let [msg (eval-err form src e)]
-                         (js/console.warn msg)
-                         (throw (js/Error. msg)))))))
+                       ; ex-info-based errors can be thrown directly,
+                       ; and indicate parse errors, etc.
+                       (if (ex-data e)
+                         (throw e)
+
+                         (let [msg (eval-err form src e)]
+                           (js/console.warn msg)
+                           (throw (js/Error. msg))))))))
 
          :context :expr
          :ns config/runtime-eval-ns}

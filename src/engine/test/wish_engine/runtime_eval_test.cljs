@@ -31,6 +31,19 @@
       (is (= :serenity (f 9002)))
       (is (= :alliance (f 0))))))
 
+(deftest error-handling-test
+  (testing "Better errors from unknown fn calls"
+    (let [err (try (eval-form '(declare-pants
+                                 {:type :captain/tight}))
+                   nil
+                   (catch :default e e))
+          data (ex-data err)]
+      (is (some? err))
+      (is (some? data))
+      (is (= {:unknown-fn "declare-pants"
+              :original-form "(declare-pants {:type :captain/tight})"}
+             data)))))
+
 ;;;
 ;;; Macro expansion
 ;;;
@@ -147,7 +160,7 @@
     (is (nil? (eval-form '(some->> [:a :b :c]
                                    (filter nil?)
                                    seq
-                                   (throw)))))))
+                                   (vec)))))))
 
 (deftest when-forms-test
   (testing "when"

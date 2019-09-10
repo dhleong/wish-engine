@@ -1,5 +1,6 @@
 (ns wish-engine.runtime-eval
-  (:require [wish-engine.runtime.config :as config]
+  (:require [clojure.string :as str]
+            [wish-engine.runtime.config :as config]
             [wish-engine.scripting-api :as api])
   (:require-macros [wish-engine.runtime.js :refer [export-fn export-sym]]))
 
@@ -41,6 +42,20 @@
                     (lazy-seq (step (increment v-seqs)))))))]
     (when (every? seq seqs)
       (lazy-seq (step v-original-seqs)))))
+
+(defn- wrap-exc [fn-name form-str e]
+  (if (str/includes? (ex-message e) "of undefined")
+    (ex-info (str "Unable to call unknown fn: " fn-name)
+             {:unknown-fn fn-name
+              :original-form form-str}
+             e)
+    e))
+
+(defn ^:export try-unsafe [fn-name form-str wrapped-fn]
+  (try
+    (wrapped-fn)
+    (catch :default e
+      (throw (wrap-exc fn-name form-str e)))))
 
 
 ; ======= Fn/macro export =================================
