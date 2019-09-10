@@ -327,7 +327,6 @@
                      (get-in state [:wish-engine/state :lists list-id]))
              seq
              (mapcat (fn [entry]
-                       (println "entry=" entry)
                        (when-let [results (if (fn? entry)
                                             (entry state)
                                             entry)]
