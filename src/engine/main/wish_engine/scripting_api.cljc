@@ -273,7 +273,27 @@
                   (->> feature
                        validate-feature-map
                        compile-feature-map)
-                  (util/feature-by-id state id))]
+                  (util/feature-by-id state id))
+
+        ; prepare for instancing
+        instanced? (:instanced? feature)
+        next-instance (get-in state [:wish/instances id] 0)
+        with-instance (if-not instanced? feature
+                        (assoc feature
+                               :wish/instance next-instance
+                               :wish/instance-id (util/instance-id
+                                                   (:id feature)
+                                                   (:id state)
+                                                   next-instance)))
+
+        ; inflate selected options
+        selected-options (util/selected-options state with-instance)]
+
+    (when (and (not instanced?)
+               (> next-instance 0))
+      (js/console.warn "Adding duplicate feature " id
+                       " from " *apply-context*
+                       " but it is not instanced"))
 
     (as-> state state
 
@@ -281,12 +301,27 @@
       (if-not declared-inline? state
         (assoc-in state [:declared-features id] feature))
 
+      (update-in state [:wish/instances id] inc)
+
       ; install the feature
       (update state :active-features conj-vec
-              (let [base {:id id}]
+              (as-> {:id id} instance
+
+                ; attach the context
                 (if-let [ctx *apply-context*]
-                  (assoc base :wish-engine/source ctx)
-                  base)))
+                  (assoc instance :wish-engine/source ctx)
+                  instance)
+
+                ; attach selected-options
+                (if-not selected-options instance
+                  (assoc instance
+                         :wish-engine/selected-options selected-options))
+
+                ; attach instance info
+                (if-not instanced? instance
+                  (merge (select-keys with-instance [:wish/instance
+                                                     :wish/instance-id])
+                         instance))))
 
       ; apply any apply-fn
       (if-let [apply-fn (:! feature)]
@@ -294,15 +329,14 @@
         state)
 
       ; apply options
-      (if-let [selected-options (util/selected-options state feature)]
+      (if-not selected-options state
         (reduce
           (fn [s option]
             (if-let [apply-fn (:! option)]
               (apply-fn s)
               s))
           state
-          selected-options)
-        state))))
+          selected-options)))))
 
 (defn-api provide-features [state & features]
   (loop [state state
@@ -327,7 +361,6 @@
                      (get-in state [:wish-engine/state :lists list-id]))
              seq
              (mapcat (fn [entry]
-                       (println "entry=" entry)
                        (when-let [results (if (fn? entry)
                                             (entry state)
                                             entry)]

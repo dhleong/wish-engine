@@ -20,6 +20,14 @@
   (or (get-in state [:declared-features id])
       (get-in state [:wish-engine/state :features id])))
 
+(defn instance-id [feature-id container-id instance-n]
+  (keyword (namespace feature-id)
+           (str (name feature-id)
+                "#"
+                (name container-id)
+                "#"
+                instance-n)))
+
 (defn merge-item-spec [base item]
   (merge-with
     (fn [a b]
@@ -43,7 +51,9 @@
       (get-in state [:wish-engine/state :options (:id feature) option-id])))
 
 (defn selected-options [state feature]
-  (let [option-ids (get-in state [:wish-engine/options (:id feature)])]
+  (let [feature-id (or (:wish/instance-id feature)
+                       (:id feature))
+        option-ids (get-in state [:wish-engine/options feature-id])]
     (some->> option-ids
              seq
              (map (partial option-by-id state feature)))))

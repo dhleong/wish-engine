@@ -36,6 +36,7 @@
           inflated (core/inflate-entity
                      state
                      f
+                     {}
                      {})]
 
       (is (= {:base-feature true
@@ -55,3 +56,4 @@
              (->> inflated
                   :features
                   (map :id)))))))
+
