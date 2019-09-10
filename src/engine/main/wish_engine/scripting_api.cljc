@@ -284,7 +284,10 @@
                                :wish/instance-id (util/instance-id
                                                    (:id feature)
                                                    (:id state)
-                                                   next-instance)))]
+                                                   next-instance)))
+
+        ; inflate selected options
+        selected-options (util/selected-options state with-instance)]
 
     (when (and (not instanced?)
                (> next-instance 0))
@@ -309,6 +312,11 @@
                   (assoc instance :wish-engine/source ctx)
                   instance)
 
+                ; attach selected-options
+                (if-not selected-options instance
+                  (assoc instance
+                         :wish-engine/selected-options selected-options))
+
                 ; attach instance info
                 (if-not instanced? instance
                   (merge (select-keys with-instance [:wish/instance
@@ -321,15 +329,14 @@
         state)
 
       ; apply options
-      (if-let [selected-options (util/selected-options state with-instance)]
+      (if-not selected-options state
         (reduce
           (fn [s option]
             (if-let [apply-fn (:! option)]
               (apply-fn s)
               s))
           state
-          selected-options)
-        state))))
+          selected-options)))))
 
 (defn-api provide-features [state & features]
   (loop [state state

@@ -30,11 +30,11 @@
   (->> entity
        :active-features
 
-       ; TODO expand :instanced features? warn of duplicates?
        (map (fn [feature-info]
               (with-meta
                 (merge (select-keys feature-info [:wish/instance
-                                                  :wish/instance-id])
+                                                  :wish/instance-id
+                                                  :wish-engine/selected-options])
                        (feature-by-id entity (:id feature-info)))
                 feature-info)))))
 

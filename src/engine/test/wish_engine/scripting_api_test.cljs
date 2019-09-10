@@ -4,6 +4,9 @@
             [wish-engine.core :as core]
             [wish-engine.scripting-api :as api]))
 
+(defn- ->ids [entities]
+  (map :id entities))
+
 (deftest utils-test
   (testing "Ordinal"
     (is (= "1st" (eval-form '(ordinal 1))))
@@ -233,12 +236,18 @@
                   :features
                   (map :wish/instance-id))))
 
-      ; TODO we should maybe store selected options in a field on the feature?
+      ; options were applied
       (is (= {:knife true
               :pistol true
               :rifle true
               :vera true}
-             (:attrs inflated))))))
+             (:attrs inflated)))
+
+      ; options are attached
+      (is (= [:knife]
+             (-> inflated :features (nth 0)
+                 :wish-engine/selected-options
+                 ->ids))))))
 
 
 ; ======= list handling ===================================
