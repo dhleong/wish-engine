@@ -1,6 +1,7 @@
 (ns wish-engine.scripting-api-test
   (:require [cljs.test :refer-macros [deftest testing is]]
             [wish-engine.test-util :refer [eval-form eval-state]]
+            [wish-engine.core :as core]
             [wish-engine.scripting-api :as api]))
 
 (deftest utils-test
@@ -152,7 +153,8 @@
                                  :wish-engine/source :serenity}]
               :declared-features {:captain/sidearm {:id :captain/sidearm
                                                     :name "Sidearm"}}}
-             (state! {})))))
+             (-> (state! {})
+                 (select-keys [:active-features :declared-features]))))))
 
   (testing "Apply inline options"
     (let [{{f :serenity} :features} (eval-state
@@ -178,6 +180,57 @@
                (:attrs inflated)))
         (is (= {:sidearm {:pistol {:wish-engine/source :pistol}}}
                (:attrs/meta inflated)))))))
+
+
+; ======= instancing ======================================
+
+(deftest instancing-test
+  (testing "Expand instanced features"
+    (let [{{c :crew-member} :classes :as state}
+          (eval-state '(do
+                         (declare-features
+                           {:id :weapon
+                            :instanced? true
+                            :max-options 1})
+
+                         (declare-options
+                           :weapon
+                           {:id :knife}
+                           {:id :pistol}
+                           {:id :rifle}
+                           {:id :vera})
+
+                         (declare-class
+                           {:id :crew-member
+                            :! (on-state
+                                 (provide-features :weapon))
+                            :levels {2 {:! (on-state
+                                             (provide-features :weapon))}
+                                     3 {:! (on-state
+                                             (provide-features :weapon))}
+                                     4 {:! (on-state
+                                             (provide-features :weapon))}}})))
+          inflated (core/inflate-entity
+                     state
+                     c
+                     {:id (:id c)
+                      :level 4}
+                     {:weapon#crew-member#0 #{:knife}
+                      :weapon#crew-member#1 #{:pistol}
+                      :weapon#crew-member#2 #{:rifle}
+                      :weapon#crew-member#3 #{:vera}})]
+
+      (is (= [:weapon#crew-member#0
+              :weapon#crew-member#1
+              :weapon#crew-member#2
+              :weapon#crew-member#3]
+
+             (->> inflated
+                  :features
+                  (map :wish/instance-id))))
+
+      ; TODO verify the selected options
+      )))
 
 
 ; ======= list handling ===================================

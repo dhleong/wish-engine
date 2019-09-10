@@ -33,12 +33,17 @@
        ; TODO expand :instanced features? warn of duplicates?
        (map (fn [feature-info]
               (with-meta
-                (feature-by-id entity (:id feature-info))
+                (merge (select-keys feature-info [:wish/instance
+                                                  :wish/instance-id])
+                       (feature-by-id entity (:id feature-info)))
                 feature-info)))))
 
 (defn inflate-entity
-  [engine-state entity options]
+  [engine-state entity entity-state options]
   (as-> (empty-entity engine-state options) e
+
+    (merge e entity-state)
+
     (if-let [apply-fn (:! entity)]
       (apply-fn e)
       e)

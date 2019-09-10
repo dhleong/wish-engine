@@ -20,6 +20,14 @@
   (or (get-in state [:declared-features id])
       (get-in state [:wish-engine/state :features id])))
 
+(defn instance-id [feature-id container-id instance-n]
+  (keyword (namespace feature-id)
+           (str (name feature-id)
+                "#"
+                (name container-id)
+                "#"
+                instance-n)))
+
 (defn merge-item-spec [base item]
   (merge-with
     (fn [a b]
