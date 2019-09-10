@@ -51,7 +51,9 @@
       (get-in state [:wish-engine/state :options (:id feature) option-id])))
 
 (defn selected-options [state feature]
-  (let [option-ids (get-in state [:wish-engine/options (:id feature)])]
+  (let [feature-id (or (:wish/instance-id feature)
+                       (:id feature))
+        option-ids (get-in state [:wish-engine/options feature-id])]
     (some->> option-ids
              seq
              (map (partial option-by-id state feature)))))

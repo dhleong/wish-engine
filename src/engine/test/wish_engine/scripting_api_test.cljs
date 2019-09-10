@@ -195,10 +195,14 @@
 
                          (declare-options
                            :weapon
-                           {:id :knife}
-                           {:id :pistol}
-                           {:id :rifle}
-                           {:id :vera})
+                           {:id :knife
+                            :! (on-state (provide-attr :knife true))}
+                           {:id :pistol
+                            :! (on-state (provide-attr :pistol true))}
+                           {:id :rifle
+                            :! (on-state (provide-attr :rifle true))}
+                           {:id :vera
+                            :! (on-state (provide-attr :vera true))})
 
                          (declare-class
                            {:id :crew-member
@@ -229,8 +233,12 @@
                   :features
                   (map :wish/instance-id))))
 
-      ; TODO verify the selected options
-      )))
+      ; TODO we should maybe store selected options in a field on the feature?
+      (is (= {:knife true
+              :pistol true
+              :rifle true
+              :vera true}
+             (:attrs inflated))))))
 
 
 ; ======= list handling ===================================

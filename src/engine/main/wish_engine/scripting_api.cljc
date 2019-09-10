@@ -279,12 +279,12 @@
         instanced? (:instanced? feature)
         next-instance (get-in state [:wish/instances id] 0)
         with-instance (if-not instanced? feature
-                        (assoc instance
-                         :wish/instance next-instance
-                         :wish/instance-id (util/instance-id
-                                             (:id feature)
-                                             (:id state)
-                                             next-instance)))]
+                        (assoc feature
+                               :wish/instance next-instance
+                               :wish/instance-id (util/instance-id
+                                                   (:id feature)
+                                                   (:id state)
+                                                   next-instance)))]
 
     (when (and (not instanced?)
                (> next-instance 0))
