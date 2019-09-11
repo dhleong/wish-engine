@@ -1,5 +1,6 @@
 (ns wish-engine.core
-  (:require [wish-engine.runtime :as runtime]
+  (:require [wish-engine.model :as m]
+            [wish-engine.runtime :as runtime]
             [wish-engine.util :refer [feature-by-id]]))
 
 (defn- state-value [engine-state]
@@ -22,6 +23,19 @@
 
 (defn create-engine []
   (runtime/create-engine))
+
+(defn create-state [engine]
+  (m/create-state engine))
+
+;;;
+;;; initialization
+
+(defn load-source [engine state source]
+  (let [source-form (if (string? source)
+                      (m/parse-string engine
+                                      (str "(do " source-string ")"))
+                      source)]
+    (m/eval-source-form engine state source-form)))
 
 ;;;
 ;;; entity inflation

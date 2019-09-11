@@ -187,7 +187,7 @@
   WishEngine
   (create-state [this] (atom {}))
   (parse-string [this s]
-    (edn/read-string s #_(str "(do " s ")")))
+    (edn/read-string s))
   (eval-source-form [this state form]
     (binding [*engine-state* state]
       (eval-form this form))))
