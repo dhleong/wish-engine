@@ -282,7 +282,48 @@
       (is (= [:knife]
              (-> inflated :features (nth 0)
                  :wish-engine/selected-options
-                 ->ids))))))
+                 ->ids)))))
+
+  (testing "Provide instance-id with state map"
+    (let [{{c :crew-member} :classes :as state}
+          (eval-state '(do
+                         (declare-features
+                           {:id :weapon
+                            :instanced? true
+                            :max-options 1})
+
+                         (declare-options
+                           :weapon
+                           {:id :pistol
+                            :! (on-state
+                                 (provide-attr
+                                   [:weapons (:wish/instance-id state)]
+                                   :pistol))}
+                           {:id :vera
+                            :! (on-state
+                                 (provide-attr
+                                   [:weapons (:wish/instance-id state)]
+                                   :vera))})
+
+                         (declare-class
+                           {:id :crew-member
+                            :! (on-state
+                                 (provide-features :weapon))
+                            :levels {2 {:! (on-state
+                                             (provide-features :weapon))}}})))
+          inflated (core/inflate-entity
+                     state
+                     c
+                     {:id (:id c)
+                      :level 4}
+                     {:weapon#crew-member#0 #{:pistol}
+                      :weapon#crew-member#1 #{:vera}})]
+
+      ; options were applied
+      (is (= {:weapons {:weapon#crew-member#0 :pistol
+                        :weapon#crew-member#1 :vera}}
+             (:attrs inflated)))))
+  )
 
 
 ; ======= list handling ===================================

@@ -3,6 +3,9 @@
             [wish-engine.util :as util
              :refer [conj-vec throw-arg throw-msg]]))
 
+(def ^:private instance-keys [:wish/instance
+                              :wish/instance-id])
+
 ; ======= utils ===========================================
 
 (defn- extract-feature-id [feature-or-id]
@@ -85,7 +88,12 @@
 (defn- install-instance-info [feature apply-context state]
   (let [id (:id feature)
         instanced? (:instanced? feature)
-        next-instance (get-in state [:wish/instances id] 0)]
+        next-instance (get-in state [:wish/instances id] 0)
+        instance-id (when instanced?
+                      (util/instance-id
+                        id
+                        (:id state)
+                        next-instance))]
 
     (when (and (not instanced?)
                (> next-instance 0))
@@ -95,12 +103,9 @@
 
     (if-not instanced?
       feature
-      (assoc feature
-             :wish/instance next-instance
-             :wish/instance-id (util/instance-id
-                                 id
-                                 (:id state)
-                                 next-instance)))))
+      (-> feature
+          (assoc :wish/instance next-instance
+                 :wish/instance-id instance-id)))))
 
 (defn- declare-feature [state feature declared-inline?]
   (if-not declared-inline?
@@ -123,8 +128,7 @@
 
     ; attach instance info
     (if-not (:instanced? with-instance) instance
-      (merge (select-keys with-instance [:wish/instance
-                                         :wish/instance-id])
+      (merge (select-keys with-instance instance-keys)
              instance))))
 
 (defn- apply-options [state selected-options]
@@ -138,12 +142,18 @@
       selected-options)))
 
 (defn- on-provide [state feature selected-options]
-  (as-> state state
-    (if-let [apply-fn (:! feature)]
-      (apply-fn state)
-      state)
+  (let [instance-info (select-keys feature instance-keys)
+        previous-instance (select-keys state instance-keys)
+        state-with-instance (merge state instance-info)]
+    (as-> state-with-instance state
+      (if-let [apply-fn (:! feature)]
+        (apply-fn state)
+        state)
 
-    (apply-options state selected-options)))
+      (apply-options state selected-options)
+
+      ; restore:
+      (merge state previous-instance))))
 
 (defn provide [apply-context state feature]
   (let [id (extract-feature-id feature)
@@ -178,4 +188,4 @@
 
       ; trigger any on-provide (:!) fn on the feature and any of its
       ; selected optiosn
-      (on-provide feature selected-options))))
+      (on-provide with-instance selected-options))))
