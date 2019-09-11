@@ -4,6 +4,7 @@
             [clojure.walk :refer [postwalk]]
             [cljs.reader :as edn]
             [cljs.js :as cljs :refer [empty-state js-eval]]
+            [wish-engine.edn :refer [edn-readers]]
             [wish-engine.model :refer [WishEngine]]
             [wish-engine.runtime.config :as config]
             [wish-engine.runtime.state :refer [*engine-state*]]
@@ -193,7 +194,7 @@
   WishEngine
   (create-state [this] (atom {}))
   (parse-string [this s]
-    (edn/read-string s))
+    (edn/read-string {:readers edn-readers} s))
   (eval-source-form [this state form]
     (binding [*engine-state* state]
       (eval-form this form))))

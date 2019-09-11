@@ -31,6 +31,24 @@
       (is (= :serenity (f 9002)))
       (is (= :alliance (f 0))))))
 
+(deftest quoted-forms-test
+  (testing "Handle quoted forms"
+    (let [form (eval-form
+                 '{:attrs
+                   {:5e/starting-eq
+                    '[(:mace :warhammer)
+                      (:scale-mail :leather-armor :chain-mail)
+                      ([:light-crossbow :crossbow-bolt] {:type :weapon
+                                                         :category :simple})
+                      (:priests-pack :explorers-pack)
+                      [:shield {:kind :holy-symbol}]]}})
+          eq (-> form :attrs :5e/starting-eq)]
+      (is (map? form))
+      (is (vector? eq))
+
+      (is (list? (first eq)))
+      (is (vector? (last eq))))))
+
 (deftest error-handling-test
   (testing "Better errors from unknown fn calls"
     (let [err (try (eval-form '(declare-pants

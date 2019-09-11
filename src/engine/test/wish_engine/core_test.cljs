@@ -3,6 +3,14 @@
             [wish-engine.test-util :refer [eval-state]]
             [wish-engine.core :as core]))
 
+(deftest load-source-test
+  (testing "load-source with quoted form"
+    (let [e (core/create-engine)
+          s (core/create-state e)
+          loaded (core/load-source e s "{:5e/starting-eq #'[(:mace :warhammer)]}")]
+      (is (some? loaded))
+      (is (list? (get-in loaded [:5e/starting-eq 0]))))))
+
 (deftest inflate-entity-test
   (testing "Inflate entity"
     (let [{{f :base-feature} :features :as state}
