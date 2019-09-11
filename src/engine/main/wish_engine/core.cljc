@@ -33,7 +33,7 @@
 (defn load-source [engine state source]
   (let [source-form (if (string? source)
                       (m/parse-string engine
-                                      (str "(do " source-string ")"))
+                                      (str "(do " source ")"))
                       source)]
     (m/eval-source-form engine state source-form)))
 
