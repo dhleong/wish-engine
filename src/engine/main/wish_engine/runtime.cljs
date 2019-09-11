@@ -41,9 +41,15 @@
      'fn 'fn*}
     sym))
 
+(defn- unknown-fn-call? [fn-call]
+  (and (nil? (namespace fn-call))
+       (not (contains? exported-fns fn-call))
+       (not (#{'fn* 'do 'try} fn-call))))
+
 (defn- ->compilable
-  "Given a raw symbol/expr, return something that we
-   can actually compile"
+  "Given a raw symbol/expr, return something that we can actually compile.
+
+   Public for testing purposes."
   [sym]
   (let [result (or (get exported-fns sym)
                    (->special-form sym)
@@ -62,24 +68,24 @@
 
                    (when (list? sym)
                      (let [fn-call (first sym)]
-                       (if (keyword? fn-call)
+                       (cond
+                         (keyword? fn-call)
                          (apply ->kw-get sym)
 
-                         (or (condp = fn-call
-                               'wish-engine.runtime/exported-some
-                               (when (set? (second sym))
-                                 (->has? (rest sym)))
+                         ; easy case; fall through to return unchanged
+                         (not (symbol? fn-call))
+                         nil
 
-                               ; else, fall through:
-                               nil)
+                         (and (= 'wish-engine.runtime/exported-some
+                                 fn-call)
+                              (set? (second sym)))
+                         (->has? (rest sym))
 
-                             (when (and (nil? (namespace fn-call))
-                                        (not (contains? exported-fns fn-call))
-                                        (not (#{'fn* 'do 'try} fn-call)))
-                               `(~(config/with-exported-ns 'try-unsafe)
-                                  ~(str fn-call)
-                                  ~(str sym)
-                                  (fn* [] ~sym)))))))
+                         (unknown-fn-call? fn-call)
+                         `(~(config/with-exported-ns 'try-unsafe)
+                            ~(str fn-call)
+                            ~(str sym)
+                            (fn* [] ~sym)))))
 
                    ; just return unchanged
                    sym)]
