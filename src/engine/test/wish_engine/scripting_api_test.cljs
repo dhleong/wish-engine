@@ -139,15 +139,17 @@
 
 (deftest provide-features-test
   (testing "Provide feature from :! fn"
-    (let [{{f :serenity} :features} (eval-state
-                                      '(declare-features
-                                         {:id :serenity
-                                          :! (on-state
-                                               (provide-features
-                                                 :rank/captain
+    (let [{{f :serenity} :features :as state}
+          (eval-state
+            '(declare-features
+               {:id :rank/captain}
+               {:id :serenity
+                :! (on-state
+                     (provide-features
+                       :rank/captain
 
-                                                 {:id :captain/sidearm
-                                                  :name "Sidearm"}))}))
+                       {:id :captain/sidearm
+                        :name "Sidearm"}))}))
           state! (:! f)]
       (is (ifn? state!))
       (is (= {:active-features [{:id :rank/captain
@@ -156,7 +158,7 @@
                                  :wish-engine/source :serenity}]
               :declared-features {:captain/sidearm {:id :captain/sidearm
                                                     :name "Sidearm"}}}
-             (-> (state! {})
+             (-> (state! {:wish-engine/state state})
                  (select-keys [:active-features :declared-features]))))))
 
   (testing "Apply inline options"
@@ -182,7 +184,40 @@
         (is (= {:sidearm {:pistol true}}
                (:attrs inflated)))
         (is (= {:sidearm {:pistol {:wish-engine/source :pistol}}}
-               (:attrs/meta inflated)))))))
+               (:attrs/meta inflated))))))
+
+  (testing "Support using items-from-list for feature options"
+    (let [{{f :crew-member} :classes :as state}
+          (eval-state
+            '(do
+               (declare-features
+                 {:id :weapon
+                  :values (items-from-list :weapons)})
+
+               (declare-list
+                 :weapons
+                 {:id :knife
+                  :! (on-state (provide-attr :knife true))}
+                 {:id :pistol
+                  :! (on-state (provide-attr :pistol true))}
+                 {:id :rifle
+                  :! (on-state (provide-attr :rifle true))}
+                 {:id :vera
+                  :! (on-state (provide-attr :vera true))})
+
+               (declare-class
+                 {:id :crew-member
+                  :! (on-state
+                       (provide-features :weapon))})))
+          state! (:! f)]
+      (is (ifn? state!))
+      (is (empty? (:attrs (state! {:wish-engine/state state}))))
+
+      (let [inflated (state! {:wish-engine/options
+                              {:weapon [:pistol]}
+                              :wish-engine/state state})]
+        (is (= {:pistol true}
+               (:attrs inflated)))))))
 
 
 ; ======= instancing ======================================

@@ -48,14 +48,29 @@
         :else b))
     base item))
 
+(defn sequentialify
+  "If `v` is already sequential, return it directly;
+   otherwise, wrap it in a vector"
+  [v]
+  (if (sequential? v)
+    v
+    [v]))
+
 (defn- option-by-id [state feature option-id]
   (or (some->> feature
                :values
+               (mapcat (fn [v]
+                         (cond
+                           (map? v) [v]
+                           (ifn? v) (v (:wish-engine/state state)))))
                (filter #(= option-id (:id %)))
                first)
 
       (get-in state [:options (:id feature) option-id])
-      (get-in state [:wish-engine/state :options (:id feature) option-id])))
+      (get-in state [:wish-engine/state :options (:id feature) option-id])
+
+      (throw-msg "Could not find option: " option-id
+                 " for feature: " (:id feature))))
 
 (defn selected-options [state feature]
   (let [feature-id (or (:wish/instance-id feature)

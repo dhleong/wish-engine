@@ -224,9 +224,7 @@
                        (when-let [results (if (fn? entry)
                                             (entry state)
                                             entry)]
-                         (if (sequential? results)
-                           results
-                           [results])))))))
+                         (util/sequentialify results)))))))
 
 (defn-api by-id
   "Given an ID, returns a function of `state` that will fetch

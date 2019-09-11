@@ -48,18 +48,23 @@
 
     (if-not (:values m) m
       (update m :values
-              (partial map (fn [option]
-                             (cond
-                               (map? option)
-                               (compile-map option)
+              (comp
+                (partial map (fn [option]
+                               (cond
+                                 (map? option)
+                                 (compile-map option)
 
-                               (keyword? option)
-                               option
+                                 (keyword? option)
+                                 option
 
-                               :else
-                               (throw-msg "Invalid :value option to "
-                                          (:id m)
-                                          ": " option))))))
+                                 (fn? option)
+                                 option
+
+                                 :else
+                                 (throw-msg "Invalid :value option to "
+                                            (:id m)
+                                            ": " option))))
+                util/sequentialify)))
 
     ; wrap to provide *apply-context* so we can potentially track what
     ; feature/option/etc provided what
@@ -144,9 +149,12 @@
   (let [id (extract-feature-id feature)
         declared-inline? (map? feature)
 
-        feature (if declared-inline?
-                  (->> feature validate-map compile-map)
-                  (util/feature-by-id state id))
+        feature (or (if declared-inline?
+                      (->> feature validate-map compile-map)
+                      (util/feature-by-id state id))
+
+                    (throw-msg "Unable to load feature with id: " id
+                               " (provided by " apply-context ")"))
 
         ; prepare for instancing
         with-instance (install-instance-info
