@@ -37,20 +37,25 @@
   (when (cljs-env? &env)
     (cons 'do body)))
 
+(defn set-assoc-stmt [map-name assoc-key assoc-value]
+  `(set! ~map-name
+         (assoc ~map-name
+                ~assoc-key
+                ~assoc-value)))
+
 (defn export-fn-symbol-stmt [n exported-symbol]
   (let [exported-map-name 'exported-fns
         this-ns-name (-> *ns* ns-name name)
         js-name (str (->js-name this-ns-name) "."
                      (->js-name (name exported-symbol)))]
     `(when-cljs
-       (set! ~exported-map-name
-             (assoc ~exported-map-name
-                    ~(if (string? n)
-                       `(symbol ~n)
-                       `(symbol ~(name n)))
-                    (symbol
-                      ~this-ns-name
-                      ~(name exported-symbol))))
+       ~(set-assoc-stmt exported-map-name
+                        (if (string? n)
+                          `(symbol ~n)
+                          `(symbol ~(name n)))
+                        `(symbol
+                           ~this-ns-name
+                           ~(name exported-symbol)))
        (when-not js/goog.DEBUG
          (~'js/goog.exportSymbol ~js-name ~exported-symbol)))))
 

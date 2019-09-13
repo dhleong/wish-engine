@@ -1,5 +1,8 @@
 (ns wish-engine.util)
 
+(def key-or-map? #(or (keyword? %)
+                      (map? %)))
+
 (defn throw-msg [& message]
   (throw #?(:cljs (js/Error. (apply str message))
             :clj (Exception. (apply str message)))))

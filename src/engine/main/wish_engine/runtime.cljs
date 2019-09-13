@@ -8,7 +8,9 @@
             [wish-engine.model :refer [WishEngine]]
             [wish-engine.runtime.config :as config]
             [wish-engine.runtime.state :refer [*engine-state*]]
-            [wish-engine.runtime-eval :refer [exported-fns exported-macros]]))
+            [wish-engine.runtime-eval :refer [exported-fns exported-macros]]
+            [wish-engine.scripting-api :as api]
+            [wish-engine.util :refer [key-or-map?]]))
 
 
 ; ======= Consts ==========================================
@@ -47,6 +49,20 @@
        (not (contains? exported-fns fn-call))
        (not (#{'fn* 'let* 'do 'try} fn-call))))
 
+(defn- try-eager-evaluate [[fn-call & args :as form]]
+  (println "MAYBE EAGER? " fn-call)
+  (if-let [f (get api/exported-fn-refs (symbol (name fn-call)))]
+    (do
+      (println "EAGER?" fn-call f)
+      (if (every? key-or-map? args)
+        (do
+          (apply f args)
+
+          ; return nil to ensure we don't try to double-process
+          nil)
+        form))
+    form))
+
 (defn- ->compilable
   "Given a raw symbol/expr, return something that we can actually compile.
 
@@ -83,10 +99,12 @@
                          (->has? (rest sym))
 
                          (unknown-fn-call? fn-call)
-                         `(~(config/with-exported-ns 'try-unsafe)
-                            ~(str fn-call)
-                            ~(str sym)
-                            (fn* [] ~sym)))))
+                         (do
+                           (println "UNKNOWN: " fn-call)
+                           `(~(config/with-exported-ns 'try-unsafe)
+                              ~(str fn-call)
+                              ~(str sym)
+                              (fn* [] ~sym))))))
 
                    ; just return unchanged
                    sym)]
@@ -120,33 +138,42 @@
        "\n\nOriginal error: " (.-stack e)))
 
 (defn- eval-in [state form]
-  (cljs/eval state
-        form
-        {:eval (fn [src]
-                 (let [src (update src :source process-source)]
-                   (try
-                     (js-eval src)
-                     (catch :default e
-                       ; ex-info-based errors can be thrown directly,
-                       ; and indicate parse errors, etc.
-                       (if (ex-data e)
-                         (throw e)
+  (let [start (system-time)]
+    (cljs/eval state
+               form
+               {:eval (fn [src]
+                        (let [src (update src :source process-source)]
 
-                         (let [msg (eval-err form src e)]
-                           (js/console.warn msg)
-                           (throw (js/Error. msg))))))))
+                          (let [delta (- (system-time) start)]
+                            (when (> delta 50)
+                              (println "Compile took " (.toFixed delta 6) "ms for:\n"
+                                       (:source src))))
+                          (try
+                            (js-eval src)
+                            (catch :default e
+                              ; ex-info-based errors can be thrown directly,
+                              ; and indicate parse errors, etc.
+                              (if (ex-data e)
+                                (throw e)
 
-         :context :expr
-         :ns config/runtime-eval-ns}
-        (fn [res]
-          (if (contains? res :value) ; nil or false are fine
-            (:value res)
-            (when-not (= "Could not require wish-engine.runtime"
-                         (ex-message (:error res)))
-              (throw (ex-info
-                       (str "Error evaluating: " form "\n" res)
-                       {}
-                       (:error res))))))))
+                                (let [msg (eval-err form src e)]
+                                  (js/console.warn msg)
+                                  (throw (js/Error. msg))))))))
+
+                :context :expr
+                :ns config/runtime-eval-ns}
+               (fn [res]
+                 (let [delta (- (system-time) start)]
+                   (when (> delta 50)
+                     (println "Eval took " (.toFixed delta 6) "ms for:\n" form)))
+                 (if (contains? res :value) ; nil or false are fine
+                   (:value res)
+                   (when-not (= "Could not require wish-engine.runtime"
+                                (ex-message (:error res)))
+                     (throw (ex-info
+                              (str "Error evaluating: " form "\n" res)
+                              {}
+                              (:error res)))))))))
 
 (defn- create-new-eval-state []
   (let [new-state (empty-state)]
@@ -178,7 +205,9 @@
 
 (defn eval-form [engine form]
   ;; replace fn refs with our exported versions
-  (let [cleaned-form (clean-form form)]
+  (let [cleaned-form (clean-form form)
+        cleaned-form (when (list? cleaned-form)
+                       (try-eager-evaluate cleaned-form))]
 
     (try
       (no-warn
