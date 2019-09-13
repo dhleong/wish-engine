@@ -45,7 +45,7 @@
 (defn- unknown-fn-call? [fn-call]
   (and (nil? (namespace fn-call))
        (not (contains? exported-fns fn-call))
-       (not (#{'fn* 'do 'try} fn-call))))
+       (not (#{'fn* 'let* 'do 'try} fn-call))))
 
 (defn- ->compilable
   "Given a raw symbol/expr, return something that we can actually compile.
