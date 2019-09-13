@@ -7,7 +7,12 @@
   (testing "load-source with quoted form"
     (let [e (core/create-engine)
           s (core/create-state e)
-          loaded (core/load-source e s "{:5e/starting-eq #'[(:mace :warhammer)]}")]
+          _ (core/load-source e s
+                              (str "(declare-features "
+                                   "  {:id :eq "
+                                   "   :5e/starting-eq "
+                                   "   #'[(:mace :warhammer)]})"))
+          loaded (get-in @s [:features :eq])]
       (is (some? loaded))
       (is (list? (get-in loaded [:5e/starting-eq 0]))))))
 
