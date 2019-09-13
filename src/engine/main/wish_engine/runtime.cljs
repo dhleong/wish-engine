@@ -99,7 +99,16 @@
         ; we could also just replace the _invoke sequence, but
         ; that may or may not be safe....
         #"(new cljs\.core\.Keyword\(null,\"[^\"]+\",\"[^\"]+\",\([0-9-]+\)\))\.cljs\$core\$IFn\$_invoke\$arity\$([0-9]+)\("
-        "$1.call(null,")))
+        "$1.call(null,")
+      (str/replace
+        #"cljs\.core\.PersistentVector\.fromArray"
+        "wish_engine.runtime_eval.vec_from_array")
+      (str/replace
+        #"cljs\.core\.PersistentHashMap\.fromArray"
+        "wish_engine.runtime_eval.map_from_array")
+      (str/replace
+        #"cljs\.core\.list"
+        "wish_engine.runtime_eval.exported_list")))
 
 
 ; ======= Evaluation ======================================

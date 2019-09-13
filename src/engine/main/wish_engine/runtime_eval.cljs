@@ -83,6 +83,7 @@
 
 (export-fn identity)
 (export-fn keyword)
+(export-fn list)
 (export-fn namespace)
 (export-fn name)
 (export-fn nil?)
@@ -293,3 +294,11 @@
 
    })
 
+(defn ^:export vec-from-array [xs ^boolean no-clone]
+  (cljs.core/PersistentVector.fromArray xs no-clone))
+
+(defn ^:export map-from-array [arr ^boolean no-clone]
+  (cljs.core/PersistentHashMap.fromArray arr no-clone))
+
+(defn ^:export map-from-arrays [ks vs]
+  (cljs.core/PersistentHashMap.fromArrays ks vs))
