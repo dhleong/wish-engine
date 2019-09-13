@@ -31,11 +31,13 @@
 ;;; initialization
 
 (defn load-source [engine state source]
-  (let [source-form (if (string? source)
-                      (m/parse-string engine
-                                      (str "(do " source ")"))
-                      source)]
-    (m/eval-source-form engine state source-form)))
+  (if (string? source)
+    (let [forms (m/parse-string engine
+                                (str "[" source "]"))]
+      (doseq [f forms]
+        (m/eval-source-form engine state f)))
+
+    (m/eval-source-form engine state source)))
 
 ;;;
 ;;; entity inflation

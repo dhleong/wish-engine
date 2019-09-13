@@ -4,7 +4,7 @@
   (:require [wish-engine.core :as core]))
 
 (defn ^:export eval-string
-  ([^String s] (eval-string {} s))
+  ([^String s] (eval-string nil s))
   ([state, ^String s]
    (let [engine (core/create-engine)
          state (or state (core/create-state engine))]
