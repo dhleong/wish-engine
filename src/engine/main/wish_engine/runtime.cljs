@@ -15,7 +15,7 @@
 ; ======= Consts ==========================================
 
 (def ^:private nil-symbol (symbol "nil"))
-
+(def ^:private min-duration-for-report-ms 200)
 
 
 ; ======= export fns/vars/macros for use ==================
@@ -130,7 +130,7 @@
                         (let [src (update src :source process-source)]
 
                           (let [delta (- (system-time) start)]
-                            (when (> delta 50)
+                            (when (> delta min-duration-for-report-ms)
                               (println "Compile took " (.toFixed delta 6) "ms for:\n"
                                        (:source src))))
                           (try
@@ -149,7 +149,7 @@
                 :ns config/runtime-eval-ns}
                (fn [res]
                  (let [delta (- (system-time) start)]
-                   (when (> delta 50)
+                   (when (> delta min-duration-for-report-ms)
                      (println "Eval took " (.toFixed delta 6) "ms for:\n" form)))
                  (if (contains? res :value) ; nil or false are fine
                    (:value res)
@@ -217,28 +217,50 @@
       (= 'quote fn-call)
       (second form)
 
+      ; lazily compile fns
+      (= 'fn* fn-call)
+      (let [lazy-fn (delay (eval-cleaned-form engine form))]
+        (fn [& args]
+          (apply @lazy-fn args)))
+
       (needs-eval? fn-call)
       (eval-cleaned-form engine form)
 
       :else
       form)))
 
-(defn- eager-evaluate [engine api-fn args]
-  (let [evaluated-args (prewalk (partial eval-if-necessary engine) args)]
-    (println "EAGER: " api-fn evaluated-args)
-    (apply api-fn evaluated-args)))
+(defn- eval-args-as-necessary [engine args]
+  ;; (println "< eval-args-as-necessary")
+  (let [start (system-time)
+        evaluated (prewalk (partial eval-if-necessary engine) args)
+        delta (- (system-time) start)]
+    (when (> delta min-duration-for-report-ms)
+      (println "eval-args-as-necessary took " (.toFixed delta 6) "ms for:\n"
+               args))
+    evaluated))
+
+(defn- eager-evaluate [engine api-fn-sym api-fn args]
+  (let [evaluated-args (eval-args-as-necessary engine args)
+        ;; _ (println "EAGER: " api-fn-sym evaluated-args)
+        start (system-time)
+        result (apply api-fn evaluated-args)
+        delta (- (system-time) start)]
+    (when (> delta min-duration-for-report-ms)
+      (println api-fn-sym " took " (.toFixed delta 6) "ms for:\n"
+               evaluated-args))
+    result))
 
 (defn- eager-evaluatable-fn [form]
   (when (and (list? form)
              (symbol? (first form)))
     (let [fn-call (first form)]
-      (get api/exported-fn-refs (symbol (name fn-call))))))
+      (when-let [fn-ref (get api/exported-fn-refs (symbol (name fn-call)))]
+        [fn-call fn-ref]))))
 
 (defn eval-form [engine form]
   (let [cleaned (clean-form form)]
-    (println "CLEANED" cleaned)
-    (if-let [f (eager-evaluatable-fn cleaned)]
-      (eager-evaluate engine f (rest cleaned))
+    (if-let [[fn-sym f] (eager-evaluatable-fn cleaned)]
+      (eager-evaluate engine fn-sym f (rest cleaned))
       (do
         (println "CANNOT EAGER: " cleaned)
         (eval-cleaned-form engine cleaned)))))
