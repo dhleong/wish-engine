@@ -1,7 +1,7 @@
 (ns wish-engine.runtime
   (:require [clojure.string :as str]
             [clojure.analyzer.api :refer-macros [no-warn]]
-            [clojure.walk :refer [postwalk]]
+            [clojure.walk :refer [postwalk prewalk]]
             [cljs.reader :as edn]
             [cljs.js :as cljs :refer [empty-state js-eval]]
             [wish-engine.edn :refer [edn-readers]]
@@ -9,8 +9,7 @@
             [wish-engine.runtime.config :as config]
             [wish-engine.runtime.state :refer [*engine-state*]]
             [wish-engine.runtime-eval :refer [exported-fns exported-macros]]
-            [wish-engine.scripting-api :as api]
-            [wish-engine.util :refer [key-or-map?]]))
+            [wish-engine.scripting-api :as api]))
 
 
 ; ======= Consts ==========================================
@@ -47,21 +46,7 @@
 (defn- unknown-fn-call? [fn-call]
   (and (nil? (namespace fn-call))
        (not (contains? exported-fns fn-call))
-       (not (#{'fn* 'let* 'do 'try} fn-call))))
-
-(defn- try-eager-evaluate [[fn-call & args :as form]]
-  (println "MAYBE EAGER? " fn-call)
-  (if-let [f (get api/exported-fn-refs (symbol (name fn-call)))]
-    (do
-      (println "EAGER?" fn-call f)
-      (if (every? key-or-map? args)
-        (do
-          (apply f args)
-
-          ; return nil to ensure we don't try to double-process
-          nil)
-        form))
-    form))
+       (not (#{'fn* 'let* 'do 'try 'if 'quote} fn-call))))
 
 (defn- ->compilable
   "Given a raw symbol/expr, return something that we can actually compile.
@@ -201,29 +186,62 @@
     new-state))
 
 (defn clean-form [form]
+  ;; replace fn refs with our exported versions
   (postwalk ->compilable form))
 
-(defn eval-form [engine form]
-  ;; replace fn refs with our exported versions
-  (let [cleaned-form (clean-form form)
-        cleaned-form (when (list? cleaned-form)
-                       (try-eager-evaluate cleaned-form))]
+(defn- eval-cleaned-form [engine form]
 
-    (try
-      (no-warn
-        (eval-in @(.-eval-state engine)
-                 cleaned-form))
-      (catch :default e
-        (js/console.error "Error compiling:" (str form),
-                          "Cleaned: " (str cleaned-form),
-                          e)
-        (when-let [cause (.-cause e)]
-          (js/console.error "Cause: " (.-stack cause))
-          (when-let [cause2 (.-cause cause)]
-            (js/console.error "Cause2: " (.-stack cause2))
-            (when-let [cause3 (.-cause cause2)]
-              (js/console.error "Cause3: " (.-stack cause3)))))
-        (throw e)))))
+  (try
+    (no-warn
+      (eval-in @(.-eval-state engine) form))
+    (catch :default e
+      (js/console.error "Error compiling:" (str form) e)
+      (when-let [cause (.-cause e)]
+        (js/console.error "Cause: " (.-stack cause))
+        (when-let [cause2 (.-cause cause)]
+          (js/console.error "Cause2: " (.-stack cause2))
+          (when-let [cause3 (.-cause cause2)]
+            (js/console.error "Cause3: " (.-stack cause3)))))
+      (throw e))))
+
+(defn- needs-eval? [fn-call]
+  (when fn-call
+    (or (#{'fn* 'let*} fn-call)
+        (= "wish-engine.runtime-eval" (namespace fn-call)))))
+
+(defn- eval-if-necessary [engine form]
+  (let [fn-call (when (and (list? form)
+                           (symbol? (first form)))
+                  (first form))]
+    (cond
+      (= 'quote fn-call)
+      (second form)
+
+      (needs-eval? fn-call)
+      (eval-cleaned-form engine form)
+
+      :else
+      form)))
+
+(defn- eager-evaluate [engine api-fn args]
+  (let [evaluated-args (prewalk (partial eval-if-necessary engine) args)]
+    (println "EAGER: " api-fn evaluated-args)
+    (apply api-fn evaluated-args)))
+
+(defn- eager-evaluatable-fn [form]
+  (when (and (list? form)
+             (symbol? (first form)))
+    (let [fn-call (first form)]
+      (get api/exported-fn-refs (symbol (name fn-call))))))
+
+(defn eval-form [engine form]
+  (let [cleaned (clean-form form)]
+    (println "CLEANED" cleaned)
+    (if-let [f (eager-evaluatable-fn cleaned)]
+      (eager-evaluate engine f (rest cleaned))
+      (do
+        (println "CANNOT EAGER: " cleaned)
+        (eval-cleaned-form engine cleaned)))))
 
 
 ; ======= Public interface ================================
