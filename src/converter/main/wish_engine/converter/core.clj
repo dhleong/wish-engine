@@ -4,6 +4,26 @@
 
 (declare convert)
 
+(defn- options-kw? [kw]
+  (str/ends-with? (name kw) ">>options"))
+
+(defn- convert-values-kw [kw]
+  (cond
+    (options-kw? kw)
+    `(~'options-of ~(-> kw
+                        name
+                        (str/replace ">>options" "")
+                        keyword))
+
+    :else `(~'items-from-list ~kw)))
+
+(defn- convert-kw [kw]
+  (cond
+    (options-kw? kw)
+    (convert-values-kw kw)
+
+    :else kw))
+
 (defn- convert-map [m]
   (reduce-kv
     (fn [m k v]
@@ -21,11 +41,11 @@
 
         :values
         (assoc m :values (cond
-                           (keyword? v) `(~'items-from-list ~v)
+                           (keyword? v) (convert-values-kw v)
                            (and (vector? v)
                                 (= 1 (count v))
                                 (keyword? (first v)))
-                           `(~'items-from-list ~(first v))
+                           (convert-values-kw (first v))
 
                            :else v))
 
@@ -65,6 +85,7 @@
   (cond
     (map? form) (convert-map form)
     (vector? form) (convert-vector form)
+    (keyword? form) (convert-kw form)
     :else form))
 
 (defn convert [source-forms]
