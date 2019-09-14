@@ -15,6 +15,7 @@
 ; ======= Consts ==========================================
 
 (def ^:private nil-symbol (symbol "nil"))
+(def ^:private false-symbol (symbol "false"))
 (def ^:private min-duration-for-report-ms 200)
 
 
@@ -65,7 +66,7 @@
                        (let [evaluated (apply macro (rest sym))]
                          (case evaluated
                            nil nil-symbol
-                           false `(do false)
+                           false false-symbol
                            evaluated))))
 
                    (when (list? sym)
@@ -84,16 +85,16 @@
                          (->has? (rest sym))
 
                          (unknown-fn-call? fn-call)
-                         (do
-                           (println "UNKNOWN: " fn-call)
-                           `(~(config/with-exported-ns 'try-unsafe)
-                              ~(str fn-call)
-                              ~(str sym)
-                              (fn* [] ~sym))))))
+                         `(~(config/with-exported-ns 'try-unsafe)
+                            ~(str fn-call)
+                            ~(str sym)
+                            (fn* [] ~sym)))))
 
                    ; just return unchanged
                    sym)]
-    (when-not (identical? nil-symbol result)
+    (condp identical? result
+      nil-symbol nil
+      false-symbol false
       result)))
 
 (defn- process-source [js-src]
