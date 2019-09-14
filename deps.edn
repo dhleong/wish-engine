@@ -1,0 +1,19 @@
+{:paths ["src/converter/main"]
+
+ :deps
+ {org.clojure/clojure {:mvn/version "1.10.0"}
+  com.rpl/specter {:mvn/version "1.1.2"}}
+
+ :aliases
+ {:dev {:extra-deps {cider/cider-nrepl {:mvn/version "0.21.1"}
+                     refactor-nrepl {:mvn/version "2.4.0"}}
+        :extra-paths ["test"]
+        :main-opts ["-m" "nrepl.cmdline" "--middleware" "[cider.nrepl/cider-middleware,refactor-nrepl.middleware/wrap-refactor]"]}
+
+  :test {:extra-paths ["test"]
+         :extra-deps {com.cognitect/test-runner {:git/url "https://github.com/cognitect-labs/test-runner.git"
+                                                 :sha "209b64504cb3bd3b99ecfec7937b358a879f55c1"}}
+         :main-opts ["-m" "cognitect.test-runner"]}
+
+  :compile {:main-opts ["-m" "wish-engine.converter"]}}}
+
