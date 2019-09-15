@@ -16,7 +16,6 @@
 
 (def ^:private nil-symbol (symbol "nil"))
 (def ^:private false-symbol (symbol "false"))
-(def ^:private min-duration-for-report-ms 20)
 
 
 ; ======= export fns/vars/macros for use ==================
@@ -124,42 +123,33 @@
        "\n\nOriginal error: " (.-stack e)))
 
 (defn- eval-in [state form]
-  (let [start (system-time)]
-    (cljs/eval state
-               form
-               {:eval (fn [src]
-                        (let [src (update src :source process-source)]
+  (cljs/eval state
+             form
+             {:eval (fn [src]
+                      (let [src (update src :source process-source)]
+                        (try
+                          (js-eval src)
+                          (catch :default e
+                            ; ex-info-based errors can be thrown directly,
+                            ; and indicate parse errors, etc.
+                            (if (ex-data e)
+                              (throw e)
 
-                          (let [delta (- (system-time) start)]
-                            (when (> delta min-duration-for-report-ms)
-                              (println "Compile took " (.toFixed delta 6) "ms for:\n"
-                                       (:source src))))
-                          (try
-                            (js-eval src)
-                            (catch :default e
-                              ; ex-info-based errors can be thrown directly,
-                              ; and indicate parse errors, etc.
-                              (if (ex-data e)
-                                (throw e)
+                              (let [msg (eval-err form src e)]
+                                (js/console.warn msg)
+                                (throw (js/Error. msg))))))))
 
-                                (let [msg (eval-err form src e)]
-                                  (js/console.warn msg)
-                                  (throw (js/Error. msg))))))))
-
-                :context :expr
-                :ns config/runtime-eval-ns}
-               (fn [res]
-                 (let [delta (- (system-time) start)]
-                   (when (> delta min-duration-for-report-ms)
-                     (println "Eval took " (.toFixed delta 6) "ms for:\n" form)))
-                 (if (contains? res :value) ; nil or false are fine
-                   (:value res)
-                   (when-not (= "Could not require wish-engine.runtime"
-                                (ex-message (:error res)))
-                     (throw (ex-info
-                              (str "Error evaluating: " form "\n" res)
-                              {}
-                              (:error res)))))))))
+              :context :expr
+              :ns config/runtime-eval-ns}
+             (fn [res]
+               (if (contains? res :value) ; nil or false are fine
+                 (:value res)
+                 (when-not (= "Could not require wish-engine.runtime"
+                              (ex-message (:error res)))
+                   (throw (ex-info
+                            (str "Error evaluating: " form "\n" res)
+                            {}
+                            (:error res))))))))
 
 (defn- create-new-eval-state []
   (let [new-state (empty-state)]
@@ -232,40 +222,23 @@
       form)))
 
 (defn- eval-args-as-necessary [engine args]
-  ;; (println "< eval-args-as-necessary")
-  (let [start (system-time)
-        evaluated (prewalk (partial eval-if-necessary engine) args)
-        delta (- (system-time) start)]
-    (when (> delta min-duration-for-report-ms)
-      (println "eval-args-as-necessary took " (.toFixed delta 6) "ms for:\n"
-               args))
-    evaluated))
+  (prewalk (partial eval-if-necessary engine) args))
 
-(defn- eager-evaluate [engine api-fn-sym api-fn args]
-  (let [evaluated-args (eval-args-as-necessary engine args)
-        _ (println "EAGER: " api-fn-sym evaluated-args)
-        start (system-time)
-        result (apply api-fn evaluated-args)
-        delta (- (system-time) start)]
-    (when (> delta min-duration-for-report-ms)
-      (println api-fn-sym " took " (.toFixed delta 6) "ms for:\n"
-               evaluated-args))
-    result))
+(defn- eager-evaluate [engine api-fn args]
+  (let [evaluated-args (eval-args-as-necessary engine args)]
+    (apply api-fn evaluated-args)))
 
 (defn- eager-evaluatable-fn [form]
   (when (and (list? form)
              (symbol? (first form)))
     (let [fn-call (first form)]
-      (when-let [fn-ref (get api/exported-fn-refs (symbol (name fn-call)))]
-        [fn-call fn-ref]))))
+      (get api/exported-fn-refs (symbol (name fn-call))))))
 
 (defn eval-form [engine form]
   (let [cleaned (clean-form form)]
-    (if-let [[fn-sym f] (eager-evaluatable-fn cleaned)]
-      (eager-evaluate engine fn-sym f (rest cleaned))
-      (do
-        (println "CANNOT EAGER: " cleaned)
-        (eval-cleaned-form engine cleaned)))))
+    (if-let [f (eager-evaluatable-fn cleaned)]
+      (eager-evaluate engine f (rest cleaned))
+      (eval-cleaned-form engine cleaned))))
 
 
 ; ======= Public interface ================================
