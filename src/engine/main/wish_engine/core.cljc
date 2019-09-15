@@ -2,7 +2,7 @@
   (:require [wish-engine.model :as m]
             [wish-engine.runtime :as runtime]
             [wish-engine.scripting-api :as api]
-            [wish-engine.util :as util :refer [feature-by-id]]))
+            [wish-engine.util :as util :refer [feature-by-id throw-msg]]))
 
 (defn- state-value [engine-state]
   (if (map? engine-state)
@@ -42,6 +42,9 @@
 
 ;;;
 ;;; entity inflation
+
+(defn with-state [entity engine-state]
+  (assoc entity :wish-engine/state (state-value engine-state)))
 
 (defn- inflate-features [entity]
   (->> entity
@@ -116,3 +119,24 @@
       the-race
       (merge the-race entity-state)
       options)))
+
+(defn inflate-list
+  ([engine-state entity list-or-id] (inflate-list
+                                      (with-state entity engine-state)
+                                      list-or-id))
+  ([state list-or-id]
+   (let [list-contents (cond
+                         (keyword? list-or-id)
+                         (api/inflate-list
+                           state
+                           list-or-id)
+
+                         (coll? list-or-id)
+                         list-or-id
+
+                         :else
+                         (throw-msg
+                           "You must provide either a list id or a sequence"))]
+     (inflate-entities
+       state
+       list-contents))))
