@@ -26,6 +26,15 @@
 
     :else (throw-msg "Illegal arg to conj-vec: " (type coll) ": " coll)))
 
+(defn conj-set [coll v]
+  (cond
+    (set? coll)
+    (conj coll v)
+
+    (empty? coll) #{v}
+
+    :else (throw-msg "Illegal arg to conj-vec: " (type coll) ": " coll)))
+
 (defn feature-by-id [state id]
   (or (get-in state [:declared-features id])
       (get-in state [:wish-engine/state :features id])))
@@ -50,6 +59,23 @@
 
         :else b))
     base item))
+
+(defn merge-entities [a b]
+  (merge-with
+    (fn [a b]
+      (cond
+        (map? a)
+        (merge-entities a b)
+
+        (coll? a)
+        (concat a b)
+
+        (and (fn? a)
+             (fn? b))
+        (comp b a)
+
+        :else b))
+    a b))
 
 (defn sequentialify
   "If `v` is already sequential, return it directly;

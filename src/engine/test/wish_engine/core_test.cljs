@@ -1,6 +1,6 @@
 (ns wish-engine.core-test
   (:require [cljs.test :refer-macros [deftest testing is]]
-            [wish-engine.test-util :refer [eval-state]]
+            [wish-engine.test-util :refer [eval-state eval-state]]
             [wish-engine.core :as core]
             [wish-engine.scripting-api :as api]))
 
@@ -109,3 +109,29 @@
                state
                [(api/items-from-list :ships)
                 (api/by-id :firefly)]))))))
+
+(deftest inflate-race-test
+  (testing "Inflate subrace"
+    (let [state (eval-state
+                  '(declare-race
+                     {:id :human
+                      :! (on-state
+                           (provide-attr :human? true))
+                      :levels {3 {:! (on-state
+                                      (provide-attr :aims-to-misbehave? true))}}})
+                  '(declare-subrace
+                     :human
+                     {:id :human/captain
+                      :levels {3 {:! (on-state
+                                       (provide-attr
+                                         :super-captain?
+                                         true))}}}))
+          inflated (core/inflate-race
+                     state
+                     :human/captain
+                     {:level 3}
+                     {})]
+      (is (= {:human? true
+              :aims-to-misbehave? true
+              :super-captain? true}
+             (:attrs inflated))))))

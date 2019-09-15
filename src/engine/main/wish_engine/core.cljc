@@ -92,3 +92,27 @@
             (keyword? entity) ((api/by-id entity) state)
             (fn? entity) (entity state))))
       entities)))
+
+(defn inflate-class
+  [engine-state class-id entity-state options]
+  (let [state (state-value engine-state)
+        the-class (get-in state [:classes class-id])]
+    (inflate-entity
+      engine-state
+      the-class
+      (merge the-class entity-state)
+      options)))
+
+(defn inflate-race
+  [engine-state race-id entity-state options]
+  (let [state (state-value engine-state)
+        the-race (or (get-in state [:races race-id])
+                     (when-let [subrace (get-in state [:subraces race-id])]
+                       (util/merge-entities
+                         (get-in state [:races (:wish/parent-race-id subrace)])
+                         subrace)))]
+    (inflate-entity
+      engine-state
+      the-race
+      (merge the-race entity-state)
+      options)))

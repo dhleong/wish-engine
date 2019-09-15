@@ -1,6 +1,6 @@
 (ns wish-engine.scripting-api-test
   (:require [cljs.test :refer-macros [deftest testing is]]
-            [wish-engine.test-util :refer [eval-form eval-state eval-state-seq]]
+            [wish-engine.test-util :refer [eval-form eval-state]]
             [wish-engine.core :as core]
             [wish-engine.scripting-api :as api]))
 
@@ -188,30 +188,30 @@
 
   (testing "Support using items-from-list for feature options"
     (let [{{f :crew-member} :classes :as state}
-          (eval-state-seq
-            '[(declare-features
-                {:id :weapon
-                 :values (items-from-list :weapons)
-                 :! (on-state
-                      (provide-features
-                        {:id :weapon/spare
-                         :values (items-from-list :weapons)}))})
+          (eval-state
+            '(declare-features
+               {:id :weapon
+                :values (items-from-list :weapons)
+                :! (on-state
+                     (provide-features
+                       {:id :weapon/spare
+                        :values (items-from-list :weapons)}))})
 
-              (declare-list
-                :weapons
-                {:id :knife
-                 :! (on-state (provide-attr :knife true))}
-                {:id :pistol
-                 :! (on-state (provide-attr :pistol true))}
-                {:id :rifle
-                 :! (on-state (provide-attr :rifle true))}
-                {:id :vera
-                 :! (on-state (provide-attr :vera true))})
+            '(declare-list
+               :weapons
+               {:id :knife
+                :! (on-state (provide-attr :knife true))}
+               {:id :pistol
+                :! (on-state (provide-attr :pistol true))}
+               {:id :rifle
+                :! (on-state (provide-attr :rifle true))}
+               {:id :vera
+                :! (on-state (provide-attr :vera true))})
 
-              (declare-class
-                {:id :crew-member
-                 :! (on-state
-                      (provide-features :weapon))})])
+            '(declare-class
+               {:id :crew-member
+                :! (on-state
+                     (provide-features :weapon))}))
           state! (:! f)]
       (is (ifn? state!))
       (is (empty? (:attrs (state! {:wish-engine/state state}))))

@@ -2,7 +2,8 @@
   "Public scripting API"
   (:require [wish-engine.runtime.api :refer-macros [defn-api]]
             [wish-engine.runtime.state :refer [*engine-state* *apply-context*]]
-            [wish-engine.util :as util :refer [key-or-map? throw-arg throw-msg]]
+            [wish-engine.util :as util :refer [conj-set key-or-map?
+                                               throw-arg throw-msg]]
             [wish-engine.api.features :as features]))
 
 
@@ -144,7 +145,16 @@
   (when-not (keyword? parent-race-id)
     (throw-arg "declare-subrace" parent-race-id
                "parent race id keyword"))
-  (declare-toplevel "declare-race" [:subraces parent-race-id] [race-spec]))
+
+  (let [race-id (:id race-spec)]
+    (declare-toplevel "declare-race"
+                      [:subraces]
+                      [(assoc race-spec
+                              :wish/parent-race-id parent-race-id)])
+    (swap! *engine-state*
+           update-in
+           [:subraces-of parent-race-id]
+           conj-set race-id)))
 
 
 ; ======= Entity-modifying forms ==========================
