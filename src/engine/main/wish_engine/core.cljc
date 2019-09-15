@@ -64,6 +64,15 @@
       (apply-fn e)
       e)
 
-    (assoc e :features (inflate-features e))
+    (assoc e :sorted-features (inflate-features e))
+
+    (assoc e :features (reduce
+                         (fn [m feature]
+                           (let [m (if-let [instance (:wish/instance-id feature)]
+                                     (assoc m instance feature)
+                                     m)]
+                             (assoc m (:id feature) feature)))
+                         {}
+                         (:sorted-features e)))
 
     (clean-entity e)))

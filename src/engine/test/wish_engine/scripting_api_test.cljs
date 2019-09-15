@@ -276,7 +276,7 @@
               :weapon#crew-member#3]
 
              (->> inflated
-                  :features
+                  :sorted-features
                   (map :wish/instance-id))))
 
       ; options were applied
@@ -288,7 +288,7 @@
 
       ; options are attached
       (is (= [:knife]
-             (-> inflated :features (nth 0)
+             (-> inflated :sorted-features first
                  :wish-engine/selected-options
                  ->ids)))))
 

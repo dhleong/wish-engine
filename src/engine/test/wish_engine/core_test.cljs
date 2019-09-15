@@ -75,6 +75,6 @@
               :provided-feature
               :three-nested]
              (->> inflated
-                  :features
+                  :sorted-features
                   (map :id)))))))
 
