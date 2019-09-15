@@ -369,11 +369,27 @@
                                 :crew
                                 [(by-id :mreynolds)
                                  (by-id :zoe)
-                                 (by-id :mechanic/itskaylee)])))]
+                                 (by-id :mechanic/itskaylee)
+                                 (by-id :wishywash)])))]
       (is (= [{:id :mreynolds}
               {:id :zoe}
-              {:id :mechanic/itskaylee}]
-             (api/inflate-list state :crew)))))
+              {:id :mechanic/itskaylee}
+              {:id :wishywash}]
+             (api/inflate-list
+               (assoc-in state [:list-entities :wishywash]
+                         {:id :wishywash})
+               :crew)))
+
+      (is (= [{:id :mreynolds}
+              {:id :zoe}
+              {:id :mechanic/itskaylee}
+              {:id :wishywash}]
+             (api/inflate-list
+               (core/with-state
+                 {:id :serenity
+                  :list-entities {:wishywash {:id :wishywash}}}
+                 state)
+               :crew)))))
 
   (testing "add items from list by id"
     (let [state (eval-state '(do
