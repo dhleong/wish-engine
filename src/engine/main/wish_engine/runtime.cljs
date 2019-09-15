@@ -16,7 +16,7 @@
 
 (def ^:private nil-symbol (symbol "nil"))
 (def ^:private false-symbol (symbol "false"))
-(def ^:private min-duration-for-report-ms 200)
+(def ^:private min-duration-for-report-ms 20)
 
 
 ; ======= export fns/vars/macros for use ==================
@@ -208,7 +208,8 @@
 (defn- needs-eval? [fn-call]
   (when fn-call
     (or (#{'fn* 'let*} fn-call)
-        (= "wish-engine.runtime-eval" (namespace fn-call)))))
+        (#{"wish-engine.runtime-eval"
+           "wish-engine.scripting-api"} (namespace fn-call)))))
 
 (defn- eval-if-necessary [engine form]
   (let [fn-call (when (and (list? form)
@@ -242,7 +243,7 @@
 
 (defn- eager-evaluate [engine api-fn-sym api-fn args]
   (let [evaluated-args (eval-args-as-necessary engine args)
-        ;; _ (println "EAGER: " api-fn-sym evaluated-args)
+        _ (println "EAGER: " api-fn-sym evaluated-args)
         start (system-time)
         result (apply api-fn evaluated-args)
         delta (- (system-time) start)]
