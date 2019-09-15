@@ -31,6 +31,25 @@
       (is (= :serenity (f 9002)))
       (is (= :alliance (f 0))))))
 
+(deftest fn-test
+  (testing "Support destructuring args"
+    (let [f (eval-form '(fn [{:keys [id]}]
+                          (name id)))]
+      (= "serenity"
+         (f {:id :serenity}))))
+
+  (testing "Support special map destructuring convenience"
+    (let [f (eval-form '(fn [#{id}]
+                          (name id)))]
+      (= "serenity"
+         (f {:id :serenity}))))
+
+  (testing "Support vector destructuring"
+    (let [f (eval-form '(fn [[_ id]]
+                          (name id)))]
+      (= "serenity"
+         (f [:id :serenity])))))
+
 (deftest quoted-forms-test
   (testing "Handle quoted forms"
     (let [form (eval-form

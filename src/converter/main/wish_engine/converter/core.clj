@@ -81,11 +81,17 @@
 
     :else v))
 
+(defn- convert-fn [[_ bindings & body]]
+  `(fn [#{~@bindings}]
+     ~@body))
+
 (defn- convert-subform [form]
   (cond
     (map? form) (convert-map form)
     (vector? form) (convert-vector form)
     (keyword? form) (convert-kw form)
+    (and (list? form)
+         (= 'fn (first form))) (convert-fn form)
     :else form))
 
 (defn convert [source-forms]

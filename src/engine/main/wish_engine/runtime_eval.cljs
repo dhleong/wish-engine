@@ -1,6 +1,7 @@
 (ns wish-engine.runtime-eval
   (:require [clojure.string :as str]
             [wish-engine.runtime.config :as config]
+            [wish-engine.runtime.destructure :refer [destructure-bindings]]
             [wish-engine.scripting-api :as api])
   (:require-macros [wish-engine.runtime.js :refer [export-fn export-sym]]))
 
@@ -173,6 +174,15 @@
                                    ~body-expr))
                             (combinations ~(vec seq-values)))))
 
+(defn- process-fn
+  [bindings & body]
+  (let [{bindings :bindings let-vector :let} (destructure-bindings bindings)]
+    (if let-vector
+      `(fn* ~bindings
+            (let* ~let-vector
+              ~@body))
+      `(fn* ~bindings ~@body))))
+
 (defn- process-if-let
   ([bindings then] (process-if-let bindings then nil))
   ([bindings then else]
@@ -252,6 +262,8 @@
                    (apply process-cond (nnext clauses)))))
 
    'for process-for
+
+   'fn process-fn
 
    'if-let process-if-let
 

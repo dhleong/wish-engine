@@ -38,10 +38,7 @@
         args))
 
 (defn- ->special-form [sym]
-  (get
-    {'let 'let*
-     'fn 'fn*}
-    sym))
+  (get {'let 'let*} sym))
 
 (defn- unknown-fn-call? [fn-call]
   (and (nil? (namespace fn-call))
