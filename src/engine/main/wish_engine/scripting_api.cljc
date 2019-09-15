@@ -245,6 +245,11 @@
   (fn entity-by-id [state]
     (or (get-in state [:list-entities id])
         (get-in state [:features id])
+
+        (when-let [engine-state (:wish-engine/state state)]
+          (or (get-in engine-state [:list-entities id])
+              (get-in engine-state [:features id])))
+
         (js/console.warn "Could not find entity with ID " id))))
 
 (defn-api items-from-list
