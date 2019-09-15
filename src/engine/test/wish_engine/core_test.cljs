@@ -1,7 +1,8 @@
 (ns wish-engine.core-test
   (:require [cljs.test :refer-macros [deftest testing is]]
             [wish-engine.test-util :refer [eval-state]]
-            [wish-engine.core :as core]))
+            [wish-engine.core :as core]
+            [wish-engine.scripting-api :as api]))
 
 (deftest load-source-test
   (testing "load-source with quoted form"
@@ -78,3 +79,33 @@
                   :sorted-features
                   (map :id)))))))
 
+(deftest inflate-entities-test
+  (testing "Inflate keywords"
+    (let [state (eval-state '(declare-list
+                               {:id :ships
+                                :type :features}
+                               {:id :firefly}
+                               {:id :komodo}
+                               {:id :peregrin}))]
+      (is (= [{:id :peregrin}
+              {:id :firefly}]
+             (core/inflate-entities
+               state
+               [:peregrin
+                :firefly])))))
+
+  (testing "Inflate fn calls"
+    (let [state (eval-state '(declare-list
+                               {:id :ships
+                                :type :features}
+                               {:id :firefly}
+                               {:id :komodo}
+                               {:id :peregrin}))]
+      (is (= [{:id :firefly}
+              {:id :komodo}
+              {:id :peregrin}
+              {:id :firefly}]
+             (core/inflate-entities
+               state
+               [(api/items-from-list :ships)
+                (api/by-id :firefly)]))))))

@@ -1,7 +1,8 @@
 (ns wish-engine.core
   (:require [wish-engine.model :as m]
             [wish-engine.runtime :as runtime]
-            [wish-engine.util :refer [feature-by-id]]))
+            [wish-engine.scripting-api :as api]
+            [wish-engine.util :as util :refer [feature-by-id]]))
 
 (defn- state-value [engine-state]
   (if (map? engine-state)
@@ -76,3 +77,18 @@
                          (:sorted-features e)))
 
     (clean-entity e)))
+
+(defn inflate-entities
+  "Given a sequence containing entities, entity IDs, and entity ID references,
+   such as from `(by-id)`, `(items-from-list)`, etc. return a lazy sequence
+   with all entities inflated"
+  [engine-state entities]
+  (let [state (state-value engine-state)]
+    (mapcat
+      (fn [entity]
+        (util/sequentialify
+          (cond
+            (map? entity) entity
+            (keyword? entity) ((api/by-id entity) state)
+            (fn? entity) (entity state))))
+      entities)))
