@@ -1,9 +1,13 @@
 (ns wish-engine.runtime.api
-  (:require [wish-engine.runtime.js :refer [export-fn-symbol-stmt]]))
+  (:require [wish-engine.runtime.js :refer [export-fn-symbol-stmt
+                                            set-assoc-stmt]]))
 
-(defmacro defn-api [name & body]
+(defmacro defn-api [fn-name & body]
   `(do
-     (defn ^:export ~name
+     (defn ^:export ~fn-name
        ~@body)
 
-     ~(export-fn-symbol-stmt name name)))
+     ~(set-assoc-stmt 'exported-fn-refs
+                      `(symbol ~(name fn-name))
+                      fn-name)
+     ~(export-fn-symbol-stmt fn-name fn-name)))

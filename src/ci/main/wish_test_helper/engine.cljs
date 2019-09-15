@@ -11,3 +11,10 @@
          state (or state (core/create-state engine))
          form (m/parse-string engine (str "(do " s ")"))]
      (m/eval-source-form engine state form))))
+
+(defn ^:export load-string-source
+  ([^String s] (load-string-source nil s))
+  ([state, ^String s]
+   (let [engine (core/create-engine)
+         state (or state (core/create-state engine))]
+     (core/load-source engine state s))))

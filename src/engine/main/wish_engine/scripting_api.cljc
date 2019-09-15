@@ -2,11 +2,12 @@
   "Public scripting API"
   (:require [wish-engine.runtime.api :refer-macros [defn-api]]
             [wish-engine.runtime.state :refer [*engine-state* *apply-context*]]
-            [wish-engine.util :as util :refer [throw-arg throw-msg]]
+            [wish-engine.util :as util :refer [key-or-map? throw-arg throw-msg]]
             [wish-engine.api.features :as features]))
 
 
 (def exported-fns {})
+(def exported-fn-refs {})
 
 (def ^{:dynamic true
        :private true}
@@ -28,9 +29,6 @@
                    (valid? f)) [f]
               :else (throw-arg fn-name f)))
           args))
-
-(def ^:private key-or-map? #(or (keyword? %)
-                                (map? %)))
 
 (defn- ->map [entities]
   (reduce (fn [m f]

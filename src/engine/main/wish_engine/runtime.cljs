@@ -1,20 +1,21 @@
 (ns wish-engine.runtime
   (:require [clojure.string :as str]
             [clojure.analyzer.api :refer-macros [no-warn]]
-            [clojure.walk :refer [postwalk]]
+            [clojure.walk :refer [postwalk prewalk]]
             [cljs.reader :as edn]
             [cljs.js :as cljs :refer [empty-state js-eval]]
             [wish-engine.edn :refer [edn-readers]]
             [wish-engine.model :refer [WishEngine]]
             [wish-engine.runtime.config :as config]
             [wish-engine.runtime.state :refer [*engine-state*]]
-            [wish-engine.runtime-eval :refer [exported-fns exported-macros]]))
+            [wish-engine.runtime-eval :refer [exported-fns exported-macros]]
+            [wish-engine.scripting-api :as api]))
 
 
 ; ======= Consts ==========================================
 
 (def ^:private nil-symbol (symbol "nil"))
-
+(def ^:private false-symbol (symbol "false"))
 
 
 ; ======= export fns/vars/macros for use ==================
@@ -45,7 +46,7 @@
 (defn- unknown-fn-call? [fn-call]
   (and (nil? (namespace fn-call))
        (not (contains? exported-fns fn-call))
-       (not (#{'fn* 'let* 'do 'try} fn-call))))
+       (not (#{'fn* 'let* 'do 'try 'if 'quote} fn-call))))
 
 (defn- ->compilable
   "Given a raw symbol/expr, return something that we can actually compile.
@@ -64,7 +65,7 @@
                        (let [evaluated (apply macro (rest sym))]
                          (case evaluated
                            nil nil-symbol
-                           false `(do false)
+                           false false-symbol
                            evaluated))))
 
                    (when (list? sym)
@@ -90,7 +91,9 @@
 
                    ; just return unchanged
                    sym)]
-    (when-not (identical? nil-symbol result)
+    (condp identical? result
+      nil-symbol nil
+      false-symbol false
       result)))
 
 (defn- process-source [js-src]
@@ -121,32 +124,32 @@
 
 (defn- eval-in [state form]
   (cljs/eval state
-        form
-        {:eval (fn [src]
-                 (let [src (update src :source process-source)]
-                   (try
-                     (js-eval src)
-                     (catch :default e
-                       ; ex-info-based errors can be thrown directly,
-                       ; and indicate parse errors, etc.
-                       (if (ex-data e)
-                         (throw e)
+             form
+             {:eval (fn [src]
+                      (let [src (update src :source process-source)]
+                        (try
+                          (js-eval src)
+                          (catch :default e
+                            ; ex-info-based errors can be thrown directly,
+                            ; and indicate parse errors, etc.
+                            (if (ex-data e)
+                              (throw e)
 
-                         (let [msg (eval-err form src e)]
-                           (js/console.warn msg)
-                           (throw (js/Error. msg))))))))
+                              (let [msg (eval-err form src e)]
+                                (js/console.warn msg)
+                                (throw (js/Error. msg))))))))
 
-         :context :expr
-         :ns config/runtime-eval-ns}
-        (fn [res]
-          (if (contains? res :value) ; nil or false are fine
-            (:value res)
-            (when-not (= "Could not require wish-engine.runtime"
-                         (ex-message (:error res)))
-              (throw (ex-info
-                       (str "Error evaluating: " form "\n" res)
-                       {}
-                       (:error res))))))))
+              :context :expr
+              :ns config/runtime-eval-ns}
+             (fn [res]
+               (if (contains? res :value) ; nil or false are fine
+                 (:value res)
+                 (when-not (= "Could not require wish-engine.runtime"
+                              (ex-message (:error res)))
+                   (throw (ex-info
+                            (str "Error evaluating: " form "\n" res)
+                            {}
+                            (:error res))))))))
 
 (defn- create-new-eval-state []
   (let [new-state (empty-state)]
@@ -174,27 +177,68 @@
     new-state))
 
 (defn clean-form [form]
+  ;; replace fn refs with our exported versions
   (postwalk ->compilable form))
 
-(defn eval-form [engine form]
-  ;; replace fn refs with our exported versions
-  (let [cleaned-form (clean-form form)]
+(defn- eval-cleaned-form [engine form]
 
-    (try
-      (no-warn
-        (eval-in @(.-eval-state engine)
-                 cleaned-form))
-      (catch :default e
-        (js/console.error "Error compiling:" (str form),
-                          "Cleaned: " (str cleaned-form),
-                          e)
-        (when-let [cause (.-cause e)]
-          (js/console.error "Cause: " (.-stack cause))
-          (when-let [cause2 (.-cause cause)]
-            (js/console.error "Cause2: " (.-stack cause2))
-            (when-let [cause3 (.-cause cause2)]
-              (js/console.error "Cause3: " (.-stack cause3)))))
-        (throw e)))))
+  (try
+    (no-warn
+      (eval-in @(.-eval-state engine) form))
+    (catch :default e
+      (js/console.error "Error compiling:" (str form) e)
+      (when-let [cause (.-cause e)]
+        (js/console.error "Cause: " (.-stack cause))
+        (when-let [cause2 (.-cause cause)]
+          (js/console.error "Cause2: " (.-stack cause2))
+          (when-let [cause3 (.-cause cause2)]
+            (js/console.error "Cause3: " (.-stack cause3)))))
+      (throw e))))
+
+(defn- needs-eval? [fn-call]
+  (when fn-call
+    (or (#{'fn* 'let*} fn-call)
+        (#{"wish-engine.runtime-eval"
+           "wish-engine.scripting-api"} (namespace fn-call)))))
+
+(defn- eval-if-necessary [engine form]
+  (let [fn-call (when (and (list? form)
+                           (symbol? (first form)))
+                  (first form))]
+    (cond
+      (= 'quote fn-call)
+      (second form)
+
+      ; lazily compile fns
+      (= 'fn* fn-call)
+      (let [lazy-fn (delay (eval-cleaned-form engine form))]
+        (fn [& args]
+          (apply @lazy-fn args)))
+
+      (needs-eval? fn-call)
+      (eval-cleaned-form engine form)
+
+      :else
+      form)))
+
+(defn- eval-args-as-necessary [engine args]
+  (prewalk (partial eval-if-necessary engine) args))
+
+(defn- eager-evaluate [engine api-fn args]
+  (let [evaluated-args (eval-args-as-necessary engine args)]
+    (apply api-fn evaluated-args)))
+
+(defn- eager-evaluatable-fn [form]
+  (when (and (list? form)
+             (symbol? (first form)))
+    (let [fn-call (first form)]
+      (get api/exported-fn-refs (symbol (name fn-call))))))
+
+(defn eval-form [engine form]
+  (let [cleaned (clean-form form)]
+    (if-let [f (eager-evaluatable-fn cleaned)]
+      (eager-evaluate engine f (rest cleaned))
+      (eval-cleaned-form engine cleaned))))
 
 
 ; ======= Public interface ================================
