@@ -142,6 +142,7 @@
       selected-options)))
 
 (defn- on-provide [state feature selected-options]
+  (println "selected-options of " (:id feature) = " " selected-options)
   (let [instance-info (select-keys feature instance-keys)
         previous-instance (select-keys state instance-keys)
         state-with-instance (merge state instance-info)]
@@ -156,6 +157,7 @@
       (merge state previous-instance))))
 
 (defn provide [apply-context state feature]
+  (println "provide " state feature)
   (let [id (extract-feature-id feature)
         declared-inline? (map? feature)
 

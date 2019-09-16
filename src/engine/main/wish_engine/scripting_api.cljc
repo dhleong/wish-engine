@@ -243,14 +243,7 @@
                "entity id keyword"))
 
   (fn entity-by-id [state]
-    (or (get-in state [:list-entities id])
-        (get-in state [:features id])
-
-        (when-let [engine-state (:wish-engine/state state)]
-          (or (get-in engine-state [:list-entities id])
-              (get-in engine-state [:features id])))
-
-        (js/console.warn "Could not find entity with ID " id))))
+    (util/entity-by-id state id)))
 
 (defn-api items-from-list
   "Given a list ID, returns a function of `state` that will fetch
@@ -273,9 +266,15 @@
                "list id keyword"))
 
   (fn feature-options-by-id [state]
-    (if-let [f (util/feature-by-id state feature-id)]
-      (util/selected-options state f)
-      (js/console.warn "Could not find feature: " feature-id))))
+    (or (when-let [f (util/feature-by-id state feature-id)]
+          ; normal case
+          (util/selected-options state f))
+
+        ; implicit features, like spellcaster spell lists
+        (util/selected-options state {:id feature-id})
+
+        ; nothing
+        (js/console.warn "Could not find feature: " feature-id))))
 
 (defn- add-to-list*
   [state fn-name id-or-spec entries]

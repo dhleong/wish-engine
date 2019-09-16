@@ -37,7 +37,14 @@
 
 (defn feature-by-id [state id]
   (or (get-in state [:declared-features id])
+      (get-in state [:features id])
       (get-in state [:wish-engine/state :features id])))
+
+(defn entity-by-id [state id]
+  (or (feature-by-id state id)
+      (get-in state [:list-entities id])
+      (get-in state [:wish-engine/state :list-entities id])
+      (js/console.warn "Could not find entity with ID " id)))
 
 (defn instance-id [feature-id container-id instance-n]
   (keyword (namespace feature-id)
@@ -86,17 +93,21 @@
     [v]))
 
 (defn- option-by-id [state feature option-id]
+  (println "find " option-id " for feature " feature " in " state)
   (or (some->> feature
                :values
                (mapcat (fn [v]
                          (cond
                            (map? v) [v]
-                           (ifn? v) (v (:wish-engine/state state)))))
+                           (ifn? v) (v state))))
                (filter #(= option-id (:id %)))
                first)
 
       (get-in state [:options (:id feature) option-id])
       (get-in state [:wish-engine/state :options (:id feature) option-id])
+
+      ; could be some other entity kind
+      (entity-by-id state option-id)
 
       (throw-msg "Could not find option: " option-id
                  " for feature: " (:id feature))))
@@ -105,6 +116,9 @@
   (let [feature-id (or (:wish/instance-id feature)
                        (:id feature))
         option-ids (get-in state [:wish-engine/options feature-id])]
+    (println "option-ids of " feature-id " <- " option-ids)
+    (when-not option-ids
+      (println "WARN:  could not find; options=" (get-in state [:wish-engine/options])))
     (some->> option-ids
              seq
              (map (partial option-by-id state feature)))))

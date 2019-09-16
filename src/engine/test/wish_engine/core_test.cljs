@@ -77,7 +77,29 @@
               :three-nested]
              (->> inflated
                   :sorted-features
-                  (map :id)))))))
+                  (map :id))))))
+
+  (testing ""
+    (let [state (eval-state
+                  '(declare-list
+                     :ships
+                     {:id :firefly})
+                  '(declare-class
+                     {:id :captain
+                      :levels {3 {:! (on-state
+                                       (provide-feature
+                                         {:id :piloting
+                                          :values (options-of
+                                                    :captain/ship)}))}}}))
+          options {:captain/ship [:firefly]
+                   :piloting [:firefly]}
+          captain (core/inflate-class
+                    state
+                    :captain
+                    {:level 3}
+                    options)]
+      (is (= [{:id :firefly}]
+             (-> captain :features :piloting :wish-engine/selected-options))))))
 
 (deftest inflate-entities-test
   (testing "Inflate keywords"
