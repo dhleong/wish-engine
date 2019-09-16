@@ -93,7 +93,6 @@
     [v]))
 
 (defn- option-by-id [state feature option-id]
-  (println "find " option-id " for feature " feature " in " state)
   (or (some->> feature
                :values
                (mapcat (fn [v]
@@ -116,9 +115,6 @@
   (let [feature-id (or (:wish/instance-id feature)
                        (:id feature))
         option-ids (get-in state [:wish-engine/options feature-id])]
-    (println "option-ids of " feature-id " <- " option-ids)
-    (when-not option-ids
-      (println "WARN:  could not find; options=" (get-in state [:wish-engine/options])))
     (some->> option-ids
              seq
              (map (partial option-by-id state feature)))))
