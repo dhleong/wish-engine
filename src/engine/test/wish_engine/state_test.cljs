@@ -19,6 +19,24 @@
                   keys
                   (into #{}))))))
 
+  (testing "Composite states"
+    (let [a (eval-state-ref
+              '(declare-features
+                 {:id :captain}))
+          b (eval-state-ref
+              '(declare-features
+                 {:id :ship}))
+          c (eval-state-ref
+              '(declare-features
+                 {:id :crew}))
+          combined (state/composite a b c)]
+
+      (is (= #{:captain :crew :ship}
+             (->> @combined
+                  :features
+                  keys
+                  (into #{}))))))
+
   (testing "State equality"
     (let [a (eval-state-ref
               '(declare-features

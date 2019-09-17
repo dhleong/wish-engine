@@ -78,4 +78,8 @@
 (defn clean-entity [entity]
   (dissoc entity :wish-engine/state :wish-engine/options))
 
-
+(defn composite
+  "Given multiple IEngineStates, produce a single IEngineState
+   that is a composite of them all"
+  [& states]
+  (reduce plus states))
