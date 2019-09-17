@@ -2,7 +2,8 @@
   (:require [cljs.test :refer-macros [deftest testing is]]
             [wish-engine.test-util :refer [eval-form eval-state]]
             [wish-engine.core :as core]
-            [wish-engine.scripting-api :as api]))
+            [wish-engine.scripting-api :as api]
+            [wish-engine.state :as state]))
 
 (defn- ->ids [entities]
   (map :id entities))
@@ -385,10 +386,10 @@
               {:id :mechanic/itskaylee}
               {:id :wishywash}]
              (api/inflate-list
-               (core/with-state
+               (state/with-entity
+                 state
                  {:id :serenity
-                  :list-entities {:wishywash {:id :wishywash}}}
-                 state)
+                  :list-entities {:wishywash {:id :wishywash}}})
                :crew)))))
 
   (testing "add items from list by id"
