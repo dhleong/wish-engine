@@ -9,7 +9,8 @@
             [wish-engine.runtime.config :as config]
             [wish-engine.runtime.state :refer [*engine-state*]]
             [wish-engine.runtime-eval :refer [exported-fns exported-macros]]
-            [wish-engine.scripting-api :as api]))
+            [wish-engine.scripting-api :as api]
+            [wish-engine.state :as state]))
 
 
 ; ======= Consts ==========================================
@@ -242,7 +243,7 @@
 
 (deftype JSWishEngine [eval-state]
   WishEngine
-  (create-state [this] (atom {}))
+  (create-state [this] (state/create {}))
   (parse-string [this s]
     (edn/read-string {:readers edn-readers} s))
   (eval-source-form [this state form]

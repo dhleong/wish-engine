@@ -2,23 +2,8 @@
   (:require [wish-engine.model :as m]
             [wish-engine.runtime :as runtime]
             [wish-engine.scripting-api :as api]
+            [wish-engine.state :as state]
             [wish-engine.util :as util :refer [feature-by-id throw-msg]]))
-
-(defn- state-value [engine-state]
-  (if (map? engine-state)
-    engine-state
-    @engine-state))
-
-;;;
-;;; entity wrapping/unwrapping for inflation
-
-(defn- empty-entity [engine-state options]
-  {:wish-engine/state (state-value engine-state)
-   :wish-engine/options options})
-
-(defn- clean-entity [entity]
-  (dissoc entity :wish-engine/state :wish-engine/options))
-
 
 ; ======= Public interface ================================
 
@@ -43,9 +28,6 @@
 ;;;
 ;;; entity inflation
 
-(defn with-state [entity engine-state]
-  (assoc entity :wish-engine/state (state-value engine-state)))
-
 (defn- inflate-features [entity]
   (->> entity
        :active-features
@@ -60,9 +42,7 @@
 
 (defn inflate-entity
   [engine-state entity entity-state options]
-  (as-> (empty-entity engine-state options) e
-
-    (merge e entity-state)
+  (as-> (state/with-entity engine-state entity-state options) e
 
     (if-let [apply-fn (:! entity)]
       (apply-fn e)
@@ -79,14 +59,14 @@
                          {}
                          (:sorted-features e)))
 
-    (clean-entity e)))
+    (state/clean-entity e)))
 
 (defn inflate-entities
   "Given a sequence containing entities, entity IDs, and entity ID references,
    such as from `(by-id)`, `(items-from-list)`, etc. return a lazy sequence
    with all entities inflated"
   [engine-state entities]
-  (let [state (state-value engine-state)]
+  (let [state (state/value engine-state)]
     (mapcat
       (fn [entity]
         (util/sequentialify
@@ -98,7 +78,7 @@
 
 (defn inflate-class
   [engine-state class-id entity-state options]
-  (let [state (state-value engine-state)
+  (let [state (state/value engine-state)
         the-class (get-in state [:classes class-id])]
     (inflate-entity
       engine-state
@@ -108,7 +88,7 @@
 
 (defn inflate-race
   [engine-state race-id entity-state options]
-  (let [state (state-value engine-state)
+  (let [state (state/value engine-state)
         the-race (or (get-in state [:races race-id])
                      (when-let [subrace (get-in state [:subraces race-id])]
                        (util/merge-entities
@@ -122,7 +102,7 @@
 
 (defn inflate-list
   ([engine-state entity list-or-id] (inflate-list
-                                      (with-state entity engine-state)
+                                      (state/with-entity engine-state entity)
                                       list-or-id))
   ([state list-or-id]
    (let [list-contents (cond

@@ -7,10 +7,13 @@
         state (engine/create-state eng)]
     (engine/eval-source-form eng state form)))
 
-(defn eval-state [& forms]
+(defn eval-state-ref [& forms]
   (let [eng (create-engine)
         state (engine/create-state eng)]
     (doseq [f forms]
       (engine/eval-source-form eng state f))
-    @state))
+    state))
+
+(defn eval-state [& forms]
+  @(apply eval-state-ref forms))
 
