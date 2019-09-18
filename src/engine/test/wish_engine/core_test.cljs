@@ -96,7 +96,8 @@
   (testing "Instanced feature inflation"
     (let [state (eval-state
                   '(declare-list
-                     :all-weapons
+                     {:id :all-weapons
+                      :type :feature}
                      {:id :pistol
                       :! (on-state
                            (provide-attr :pistol true))}
@@ -115,9 +116,9 @@
                               :max-options (if (< (:level state) 6)
                                              2
                                              4)
-                              :values (items-from-list :all-weapons)}))}))
+                              :value (items-from-list :all-weapons)}))}))
           options {:sidearm#captain#0 {:id :sidearm
-                                       :values [:pistol :rifle]}}
+                                       :value [:pistol :rifle]}}
           captain (core/inflate-class
                     state
                     :captain

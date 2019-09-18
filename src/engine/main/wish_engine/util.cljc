@@ -122,9 +122,9 @@
                        (:id feature))
         option-value (get-in state [:wish-engine/options feature-id])
         option-ids (if (and (map? option-value)
-                            (:values option-value))
+                            (:value option-value))
                      ; instanced feature, probably
-                     (:values option-value)
+                     (:value option-value)
 
                      ; normal case
                      option-value)]
