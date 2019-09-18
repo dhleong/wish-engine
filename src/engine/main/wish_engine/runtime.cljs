@@ -1,16 +1,19 @@
 (ns wish-engine.runtime
   (:require [clojure.string :as str]
             [clojure.analyzer.api :refer-macros [no-warn]]
-            [clojure.walk :refer [postwalk prewalk]]
+            [clojure.walk :refer [prewalk]]
             [cljs.reader :as edn]
             [cljs.js :as cljs :refer [empty-state js-eval]]
+            [com.rpl.specter :as sp]
             [wish-engine.edn :refer [edn-readers]]
             [wish-engine.model :refer [WishEngine]]
             [wish-engine.runtime.config :as config]
+            [wish-engine.runtime.selectors :as selectors]
             [wish-engine.runtime.state :refer [*engine-state*]]
             [wish-engine.runtime-eval :refer [exported-fns exported-macros]]
             [wish-engine.scripting-api :as api]
-            [wish-engine.state :as state]))
+            [wish-engine.state :as state]
+            [wish-engine.util :refer [form?]]))
 
 
 ; ======= Consts ==========================================
@@ -22,8 +25,6 @@
 ; ======= export fns/vars/macros for use ==================
 
 ;;; code rewriting for compilation
-
-(declare ->compilable)
 
 (defn- ->kw-get
   "Under advanced compilation, the function names to invoke
@@ -46,50 +47,49 @@
        (not (contains? exported-fns fn-call))
        (not (#{'fn* 'let* 'do 'try 'if 'quote} fn-call))))
 
+(defn- ->compilable-symbol [sym]
+  (or (get exported-fns sym)
+      (->special-form sym)
+
+      (when (= "js" (namespace sym))
+        nil-symbol)))
+
+(defn- ->compilable-list [[fn-call :as sym]]
+  (or (when (symbol? fn-call)
+        (when-let [macro (get exported-macros (first sym))]
+          (let [evaluated (apply macro (rest sym))]
+            (case evaluated
+              nil nil-symbol
+              false false-symbol
+              evaluated))))
+
+      (cond
+        (keyword? fn-call)
+        (apply ->kw-get sym)
+
+        ; easy case; fall through to return unchanged
+        (not (symbol? fn-call))
+        nil
+
+        (and (= 'wish-engine.runtime/exported-some
+                fn-call)
+             (set? (second sym)))
+        (->has? (rest sym))
+
+        (unknown-fn-call? fn-call)
+        `(~(config/with-exported-ns 'try-unsafe)
+           ~(str fn-call)
+           ~(str sym)
+           (fn* [] ~sym)))))
+
 (defn- ->compilable
-  "Given a raw symbol/expr, return something that we can actually compile.
-
-   Public for testing purposes."
+  "Given a raw symbol/expr, return something that we can actually compile."
   [sym]
-  (let [result (or (get exported-fns sym)
-                   (->special-form sym)
-
-                   (when (and (symbol? sym)
-                              (= "js" (namespace sym)))
-                     nil-symbol)
-
-                   (when (and (list? sym) (symbol? (first sym)))
-                     (when-let [macro (get exported-macros (first sym))]
-                       (let [evaluated (apply macro (rest sym))]
-                         (case evaluated
-                           nil nil-symbol
-                           false false-symbol
-                           evaluated))))
-
-                   (when (list? sym)
-                     (let [fn-call (first sym)]
-                       (cond
-                         (keyword? fn-call)
-                         (apply ->kw-get sym)
-
-                         ; easy case; fall through to return unchanged
-                         (not (symbol? fn-call))
-                         nil
-
-                         (and (= 'wish-engine.runtime/exported-some
-                                 fn-call)
-                              (set? (second sym)))
-                         (->has? (rest sym))
-
-                         (unknown-fn-call? fn-call)
-                         `(~(config/with-exported-ns 'try-unsafe)
-                            ~(str fn-call)
-                            ~(str sym)
-                            (fn* [] ~sym)))))
-
-                   ; just return unchanged
-                   sym)]
+  (let [result (cond
+                 (symbol? sym) (->compilable-symbol sym)
+                 (form? sym) (->compilable-list sym))]
     (condp identical? result
+      nil sym  ; return unchanged
       nil-symbol nil
       false-symbol false
       result)))
@@ -174,12 +174,16 @@
 
     new-state))
 
-(defn clean-form [form]
-  ;; replace fn refs with our exported versions
-  (postwalk ->compilable form))
+(defn clean-form
+  "'Clean' the given form and all its subforms so that it can be
+   successfully evaluated"
+  [form]
+  (sp/compiled-transform
+    selectors/compilable-target-path
+    ->compilable
+    form))
 
 (defn- eval-cleaned-form [engine form]
-
   (try
     (no-warn
       (eval-in @(.-eval-state engine) form))
@@ -200,7 +204,7 @@
            "wish-engine.scripting-api"} (namespace fn-call)))))
 
 (defn- eval-if-necessary [engine form]
-  (let [fn-call (when (and (list? form)
+  (let [fn-call (when (and (form? form)
                            (symbol? (first form)))
                   (first form))]
     (cond
@@ -227,7 +231,7 @@
     (apply api-fn evaluated-args)))
 
 (defn- eager-evaluatable-fn [form]
-  (when (and (list? form)
+  (when (and (form? form)
              (symbol? (first form)))
     (let [fn-call (first form)]
       (get api/exported-fn-refs (symbol (name fn-call))))))

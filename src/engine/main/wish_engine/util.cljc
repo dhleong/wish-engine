@@ -1,5 +1,9 @@
 (ns wish-engine.util)
 
+(defn form? [v]
+  (or (list? v)
+      (seq? v)))
+
 (def key-or-map? #(or (keyword? %)
                       (map? %)))
 
