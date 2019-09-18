@@ -228,6 +228,34 @@
         (is (= {:vera true}
                (:attrs inflated)))))))
 
+(deftest availability-attr-test
+  (testing "Just :availability-attr"
+    (let [{{f :captain} :features} (eval-state
+                                     '(declare-features
+                                        {:id :captain
+                                         :availability-attr :captain}))
+          {:keys [available?] on-apply :!} f]
+      (is (fn? available?))
+      (is (= true (available? {:attrs {}})))
+      (is (= false (available? {:attrs {:captain true}})))
+      (is (= {:captain true}
+             (:attrs (on-apply {}))))))
+
+  (testing "Both :availability-attr and :available?"
+    (let [{{f :captain} :features} (eval-state
+                                     '(declare-features
+                                        {:id :captain
+                                         :availability-attr :captain
+                                         :available?
+                                         (fn [#{available? attrs}]
+                                           (str available? attrs))}))
+          {:keys [available?] on-apply :!} f]
+      (is (fn? available?))
+      (is (= (str "true{}") (available? {:attrs {}})))
+      (is (= (str "false{:captain true}") (available? {:attrs {:captain true}})))
+      (is (= {:captain true}
+             (:attrs (on-apply {})))))))
+
 
 ; ======= instancing ======================================
 

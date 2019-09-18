@@ -4,6 +4,7 @@
             [wish-engine.runtime.state :refer [*engine-state* *apply-context*]]
             [wish-engine.util :as util :refer [conj-set key-or-map?
                                                throw-arg throw-msg]]
+            [wish-engine.api.attr :as attr]
             [wish-engine.api.features :as features]))
 
 
@@ -182,19 +183,7 @@
   (when *engine-state*
     (throw-msg "provide-attr must not be called at the top level."))
 
-  (let [attr-path (cond
-                    (vector? attr-id-or-path) attr-id-or-path
-                    (keyword? attr-id-or-path) [attr-id-or-path]
-                    :else (throw-arg "provide-attr" attr-id-or-path
-                                     ":attr or [:attr :path]"))
-
-        state (assoc-in state (cons :attrs attr-path) value)]
-
-    (if-let [context *apply-context*]
-      (assoc-in state
-                (cons :attrs/meta attr-path)
-                {:wish-engine/source context})
-      state)))
+  (attr/provide state attr-id-or-path value))
 
 ;;;
 ;;; Provide Feature

@@ -1,5 +1,6 @@
 (ns wish-engine.api.features
   (:require [wish-engine.runtime.state :refer [*apply-context*]]
+            [wish-engine.api.attr :as attr]
             [wish-engine.util :as util
              :refer [conj-vec throw-arg throw-msg]]))
 
@@ -30,57 +31,90 @@
     ; return if valid
     m))
 
+(declare compile-map)
+
+(defn- install-level-scaling [m]
+  (assoc m :! (let [{:keys [levels] existing-fn :!} m]
+                (fn apply-fn [state]
+                  (let [state (if existing-fn
+                                (existing-fn state)
+                                state)
+                        current-level (:level state)]
+                    (reduce-kv
+                      (fn [state level {level-fn :!}]
+                        (if (and (ifn? level-fn)
+                                 (>= current-level level))
+                          (level-fn state)
+                          state))
+                      state
+                      levels))))))
+
+(defn- compile-map-values [m values]
+  (->> values
+       util/sequentialify
+       (map (fn [option]
+              (cond
+                (map? option)
+                (compile-map option)
+
+                (keyword? option)
+                option
+
+                (fn? option)
+                option
+
+                :else
+                (throw-msg "Invalid :value option to "
+                           (:id m)
+                           ": " option))))))
+
+(defn- inflate-availability-attr [m]
+  (let [attr-path (util/sequentialify (:availability-attr m))
+        state-attr-path (cons :attrs attr-path)
+        available? (fn available? [state]
+                     (not (get-in state state-attr-path)))
+        on-apply (fn on-apply-availability [state]
+                   (attr/provide state attr-path true))]
+    (-> m
+        (update :available? (fn [existing-fn]
+                              (if existing-fn
+                                (fn available?-with-attr [state]
+                                  (existing-fn
+                                    (assoc state :available?
+                                           (available? state))))
+                                available?)))
+        (update :! (fn [existing-fn]
+                     (if existing-fn
+                       (comp existing-fn on-apply)
+                       on-apply))))))
+
+(defn- install-context-wrapper [m]
+  (update m :! (fn [existing-fn]
+                 (when existing-fn
+                   (vary-meta
+
+                     (fn apply-fn [state]
+                       (binding [*apply-context* (:id m)]
+                         (existing-fn state)))
+
+                     assoc :wish-engine/source (:id m))))))
+
 (defn compile-map [m]
   (as-> m m
     ; add level-scaling to the :! fn
     (if-not (:levels m) m
-      (assoc m :! (let [{:keys [levels] existing-fn :!} m]
-                    (fn apply-fn [state]
-                      (let [state (if existing-fn
-                                    (existing-fn state)
-                                    state)
-                            current-level (:level state)]
-                        (reduce-kv
-                          (fn [state level {level-fn :!}]
-                            (if (and (ifn? level-fn)
-                                     (>= current-level level))
-                              (level-fn state)
-                              state))
-                          state
-                          levels))))))
+      (install-level-scaling m))
 
     (if-not (:values m) m
-      (update m :values
-              (comp
-                (partial map (fn [option]
-                               (cond
-                                 (map? option)
-                                 (compile-map option)
+      (update m :values (partial compile-map-values m)))
 
-                                 (keyword? option)
-                                 option
-
-                                 (fn? option)
-                                 option
-
-                                 :else
-                                 (throw-msg "Invalid :value option to "
-                                            (:id m)
-                                            ": " option))))
-                util/sequentialify)))
+    (if-not (:availability-attr m) m
+      (inflate-availability-attr m))
 
     ; wrap to provide *apply-context* so we can potentially track what
     ; feature/option/etc provided what
     (if-not (:! m) m
-      (update m :! (fn [existing-fn]
-                     (when existing-fn
-                       (vary-meta
-
-                         (fn apply-fn [state]
-                           (binding [*apply-context* (:id m)]
-                             (existing-fn state)))
-
-                         assoc :wish-engine/source (:id m))))))))
+      (install-context-wrapper m))))
 
 
 ; ======= Provide handling ================================
