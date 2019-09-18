@@ -13,10 +13,10 @@
               (sp/pred (fn [v] (= 'quote (first v))))
               sp/STOP
 
-              ; pre-order traverse into the fn-call
+              ; post-order traverse into the fn-call
               (sp/pred (fn [v] (or (symbol? (first v))
                                    (keyword? (first v)))))
-              (sp/stay-then-continue [sp/ALL-WITH-META p])
+              (sp/continue-then-stay [sp/ALL-WITH-META p])
 
               ; just keep looking
               :else [sp/ALL-WITH-META p])
