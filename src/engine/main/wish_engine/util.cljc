@@ -1,4 +1,5 @@
-(ns wish-engine.util)
+(ns wish-engine.util
+  (:require [wish-engine.runtime.state :refer [*apply-context*]]))
 
 (defn form? [v]
   (or (list? v)
@@ -113,12 +114,20 @@
       (entity-by-id state option-id)
 
       (throw-msg "Could not find option: " option-id
-                 " for feature: " (:id feature))))
+                 " for feature: " (:id feature)
+                 " (providing: " *apply-context* ")")))
 
 (defn selected-options [state feature]
   (let [feature-id (or (:wish/instance-id feature)
                        (:id feature))
-        option-ids (get-in state [:wish-engine/options feature-id])]
+        option-value (get-in state [:wish-engine/options feature-id])
+        option-ids (if (and (map? option-value)
+                            (:values option-value))
+                     ; instanced feature, probably
+                     (:values option-value)
+
+                     ; normal case
+                     option-value)]
     (some->> option-ids
              seq
              (map (partial option-by-id state feature)))))

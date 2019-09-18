@@ -71,7 +71,7 @@
                   :sorted-features
                   (map :id))))))
 
-  (testing ""
+  (testing "Implicit feature support"
     (let [state (eval-state
                   '(declare-list
                      :ships
@@ -91,7 +91,41 @@
                     {:level 3}
                     options)]
       (is (= [{:id :firefly}]
-             (-> captain :features :piloting :wish-engine/selected-options))))))
+             (-> captain :features :piloting :wish-engine/selected-options)))))
+
+  (testing "Instanced feature inflation"
+    (let [state (eval-state
+                  '(declare-list
+                     :all-weapons
+                     {:id :pistol
+                      :! (on-state
+                           (provide-attr :pistol true))}
+                     {:id :rifle
+                      :! (on-state
+                           (provide-attr :rifle true))}
+                     {:id :vera
+                      :! (on-state
+                           (provide-attr :rifle true))})
+                  '(declare-class
+                     {:id :captain
+                      :! (on-state
+                           (provide-features
+                             {:id :sidearm
+                              :instanced? true
+                              :max-options (if (< (:level state) 6)
+                                             2
+                                             4)
+                              :values (items-from-list :all-weapons)}))}))
+          options {:sidearm#captain#0 {:id :sidearm
+                                       :values [:pistol :rifle]}}
+          captain (core/inflate-class
+                    state
+                    :captain
+                    {:level 3}
+                    options)]
+      (is (= {:pistol true
+              :rifle true}
+             (-> captain :attrs))))))
 
 (deftest inflate-entities-test
   (testing "Inflate keywords"
