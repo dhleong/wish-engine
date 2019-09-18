@@ -1,12 +1,14 @@
 (ns wish-engine.runtime
   (:require [clojure.string :as str]
             [clojure.analyzer.api :refer-macros [no-warn]]
-            [clojure.walk :refer [postwalk prewalk]]
+            [clojure.walk :refer [prewalk]]
             [cljs.reader :as edn]
             [cljs.js :as cljs :refer [empty-state js-eval]]
+            [com.rpl.specter :as sp]
             [wish-engine.edn :refer [edn-readers]]
             [wish-engine.model :refer [WishEngine]]
             [wish-engine.runtime.config :as config]
+            [wish-engine.runtime.selectors :as selectors]
             [wish-engine.runtime.state :refer [*engine-state*]]
             [wish-engine.runtime-eval :refer [exported-fns exported-macros]]
             [wish-engine.scripting-api :as api]
@@ -176,7 +178,7 @@
 
 (defn clean-form [form]
   ;; replace fn refs with our exported versions
-  (postwalk ->compilable form))
+  (sp/compiled-transform selectors/compilable-target-path ->compilable form))
 
 (defn- eval-cleaned-form [engine form]
 
