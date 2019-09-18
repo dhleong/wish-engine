@@ -3,7 +3,8 @@
 
   :dependencies
   ;; always use "provided" for Clojure(Script)
-  [[org.clojure/clojurescript "1.10.520" :scope "provided"]]
+  [[org.clojure/clojurescript "1.10.520" :scope "provided"]
+   [com.rpl/specter "1.1.2"]]
 
   :source-paths
   ["src/engine/main"])
