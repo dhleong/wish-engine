@@ -45,6 +45,16 @@
               '(declare-features
                  {:id :captain}))]
 
+      (is (= a a))
       (is (= a b))
-      (is (= (hash a) (hash b))))))
+      (is (= b a))
+      (is (= b b))
+      (is (= (hash a) (hash b)))))
+
+  (testing "State equality with nil"
+    (let [a (eval-state-ref
+              '(declare-features
+                 {:id :captain}))]
+
+      (is (not= a nil)))))
 

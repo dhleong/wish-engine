@@ -10,7 +10,9 @@
 (deftype SimpleEngineState [state]
   #?@(:clj [Object
             (equals [this other]
-                    (= @state @(.-state other)))
+                    (or (identical? this other)
+                        (when other
+                          (= @state @(.-state other)))))
             (hashCode [this]
                       (hash @state))]
 
@@ -19,7 +21,10 @@
                     (-equiv this other))
 
              IEquiv
-             (-equiv [this other] (= @state @(.-state other)))
+             (-equiv [this other]
+                     (or (identical? this other)
+                         (when other
+                           (= @state @(.-state other)))))
 
              IHash
              (-hash [this] (hash @state))])
