@@ -101,9 +101,10 @@
       options)))
 
 (defn inflate-list
-  ([engine-state entity list-or-id] (inflate-list
-                                      (state/with-entity engine-state entity)
-                                      list-or-id))
+  ([engine-state entity options list-or-id]
+   (inflate-list
+     (state/with-entity engine-state entity options)
+     list-or-id))
   ([state list-or-id]
    (let [list-contents (cond
                          (keyword? list-or-id)

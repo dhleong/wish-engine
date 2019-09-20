@@ -184,3 +184,32 @@
               :aims-to-misbehave? true
               :super-captain? true}
              (:attrs inflated))))))
+
+(deftest inflate-list-test
+  (testing "Inflate implicit list that had options of a feature added to it"
+    (let [state (eval-state
+                  '(declare-list
+                     :all-weapons
+                     {:id :pistol}
+                     {:id :rifle}
+                     {:id :vera})
+                  '(declare-class
+                     {:id :captain
+                      :! (on-state
+                           (provide-features
+                             {:id :sidearm
+                              :values (items-from-list :all-weapons)
+                              :max-options 1
+                              :! (on-state
+                                   (add-to-list
+                                     :captain/weapons
+                                     (options-of :sidearm)))}))}))
+          options {:sidearm [:pistol]}
+          captain (core/inflate-class
+                    state
+                    :captain
+                    {}
+                    options)]
+      (is (= [{:id :pistol}]
+             (core/inflate-list
+               state captain options :captain/weapons))))))

@@ -74,11 +74,10 @@
     @engine-state))
 
 (defn with-entity
-  ([state entity] (with-entity state entity nil))
-  ([state entity options]
-   (assoc entity
-          :wish-engine/state (value state)
-          :wish-engine/options options)))
+  [state entity options]
+  (assoc entity
+         :wish-engine/state (value state)
+         :wish-engine/options options))
 
 (defn clean-entity [entity]
   (dissoc entity :wish-engine/state :wish-engine/options))

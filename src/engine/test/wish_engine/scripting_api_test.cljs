@@ -417,7 +417,8 @@
                (state/with-entity
                  state
                  {:id :serenity
-                  :list-entities {:wishywash {:id :wishywash}}})
+                  :list-entities {:wishywash {:id :wishywash}}}
+                 {})
                :crew)))))
 
   (testing "add items from list by id"
