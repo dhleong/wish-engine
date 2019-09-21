@@ -34,7 +34,7 @@
         (:! :+!)
         (if (= 'on-state (first v))
           m
-          (assoc m :! `(~'on-state ~@(convert v))))
+          (assoc m :! `(~'on-state ~@v)))
 
         :&levels
         (assoc m :levels v)
@@ -82,7 +82,7 @@
     :else v))
 
 (defn- convert-fn [[_ bindings & body]]
-  `(fn [#{~@bindings}]
+  `(~'fn [#{~@bindings}]
      ~@body))
 
 (defn- convert-subform [form]
