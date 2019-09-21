@@ -1,6 +1,6 @@
 (ns wish-engine.runtime-eval-test
   (:require [cljs.test :refer-macros [deftest testing is]]
-            [wish-engine.test-util :refer [eval-form]]))
+            [wish-engine.test-util :refer [eval-form eval-state]]))
 
 (deftest basic-test
   (testing "Math"
@@ -30,6 +30,18 @@
       (is (= :firefly (f 42)))
       (is (= :serenity (f 9002)))
       (is (= :alliance (f 0))))))
+
+(deftest doseq-test
+  (testing "Support doseq"
+    (let [state (eval-state
+                  '(doseq [list-id [:captain :crew]]
+                     (declare-list
+                       list-id
+                       :sidearm)))]
+      (is (= [:sidearm]
+             (get-in state [:lists :captain])))
+      (is (= (get-in state [:lists :captain])
+             (get-in state [:lists :crew]))))))
 
 (deftest fn-test
   (testing "Support destructuring args"

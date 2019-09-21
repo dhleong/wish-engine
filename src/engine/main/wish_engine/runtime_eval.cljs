@@ -109,6 +109,7 @@
 (export-fn nth)
 
 (export-fn comp)
+(export-fn doall)
 (export-fn filter)
 (export-fn keep)
 (export-fn map)
@@ -173,6 +174,9 @@
                                  (let* ~let-form
                                    ~body-expr))
                             (combinations ~(vec seq-values)))))
+
+(defn- process-doseq [seq-exprs body-expr]
+  `(~(config/exported-fqn 'doall) ~(process-for seq-exprs body-expr)))
 
 (defn- process-fn
   [bindings & body]
@@ -261,6 +265,7 @@
                               "cond requires an even number of forms")))
                    (apply process-cond (nnext clauses)))))
 
+   'doseq process-doseq
    'for process-for
 
    'fn process-fn
