@@ -95,7 +95,13 @@
 
                      (fn apply-fn [state]
                        (binding [*apply-context* (:id m)]
-                         (existing-fn state)))
+                         (try
+                           (existing-fn state)
+                           (catch :default e
+                             (throw (ex-info
+                                      (str "Failed to apply " (:id m))
+                                      m
+                                      e))))))
 
                      assoc :wish-engine/source (:id m))))))
 
