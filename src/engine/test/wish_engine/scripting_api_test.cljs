@@ -360,7 +360,46 @@
       (is (= {:weapons {:weapon#crew-member#0 :pistol
                         :weapon#crew-member#1 :vera}}
              (:attrs inflated)))))
-  )
+
+  (testing "Provide option-id with state map from :values"
+    (let [{{c :crew-member} :classes :as state}
+        (eval-state '(do
+                       (declare-features
+                         {:id :weapon
+                          :instanced? true
+                          :max-options 2
+                          :multi? true
+                          :values
+                          (for [id [:pistol :vera]]
+                            {:id id
+                             :! (on-state
+                                  (provide-attr
+                                    [:weapons (:wish/option-id state)]
+                                    id))})})
+
+                       (declare-class
+                         {:id :crew-member
+                          :! (on-state
+                               (provide-features :weapon))
+                          :levels {2 {:! (on-state
+                                           (provide-features :weapon))}}})))
+        inflated (core/inflate-entity
+                   state
+                   c
+                   {:id (:id c)
+                    :level 4}
+                   {:weapon#crew-member#0 [:pistol :vera]
+                    :weapon#crew-member#1 [:pistol]})]
+
+    ; options were applied
+    (is (= {:weapons {:weapon#crew-member#0#0 :pistol
+                      :weapon#crew-member#0#1 :vera
+                      :weapon#crew-member#1#0 :pistol}}
+           (:attrs inflated)))
+    (is (= {:weapons {:weapon#crew-member#0#0 {:wish-engine/source :pistol}
+                      :weapon#crew-member#0#1 {:wish-engine/source :vera}
+                      :weapon#crew-member#1#0 {:wish-engine/source :pistol}}}
+           (:attrs/meta inflated))))))
 
 
 ; ======= list handling ===================================

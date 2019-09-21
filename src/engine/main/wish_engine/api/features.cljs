@@ -166,14 +166,22 @@
              instance))))
 
 (defn- apply-options [state selected-options]
-  (if-not selected-options state
-    (reduce
-      (fn [s option]
-        (if-let [apply-fn (:! option)]
-          (apply-fn s)
-          s))
-      state
-      selected-options)))
+  (let [instance-id (or (:wish/instance-id state)
+                        (:id state))]
+    (if-not selected-options state
+      (reduce-kv
+        (fn [s i option]
+          (if-let [apply-fn (:! option)]
+            (apply-fn (if instance-id
+                        (assoc s :wish/option-id
+                              (keyword
+                                (namespace instance-id)
+                                (str (name instance-id)
+                                     "#" i)))
+                        s))
+            s))
+        state
+        (vec selected-options)))))
 
 (defn- on-provide [state feature selected-options]
   (let [instance-info (select-keys feature instance-keys)
