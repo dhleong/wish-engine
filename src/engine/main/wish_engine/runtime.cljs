@@ -245,14 +245,15 @@
 
 ; ======= Public interface ================================
 
-(deftype JSWishEngine [eval-state]
+(deftype JSWishEngine [eval-state config]
   WishEngine
-  (create-state [this] (state/create {}))
+  (create-state [this] (state/create {:wish-engine/config config}))
   (parse-string [this s]
     (edn/read-string {:readers edn-readers} s))
   (eval-source-form [this state form]
     (binding [*engine-state* state]
       (eval-form this form))))
 
-(defn create-engine []
-  (->JSWishEngine (delay (create-new-eval-state))))
+(defn create-engine [config]
+  (->JSWishEngine (delay (create-new-eval-state))
+                  config))

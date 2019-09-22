@@ -1,5 +1,6 @@
 (ns wish-engine.core
-  (:require [wish-engine.model :as m]
+  (:require [wish-engine.hooks :as hooks]
+            [wish-engine.model :as m]
             [wish-engine.runtime :as runtime]
             [wish-engine.scripting-api :as api]
             [wish-engine.state :as state]
@@ -7,8 +8,10 @@
 
 ; ======= Public interface ================================
 
-(defn create-engine []
-  (runtime/create-engine))
+(defn create-engine
+  ([] (create-engine nil))
+  ([config]
+   (runtime/create-engine config)))
 
 (defn create-state [engine]
   (m/create-state engine))
@@ -59,7 +62,9 @@
                          {}
                          (:sorted-features e)))
 
-    (state/clean-entity e)))
+    (state/clean-entity e)
+
+    (hooks/run engine-state :inflate-entity e)))
 
 (defn inflate-entities
   "Given a sequence containing entities, entity IDs, and entity ID references,
@@ -80,11 +85,12 @@
   [engine-state class-id entity-state options]
   (let [state (state/value engine-state)
         the-class (get-in state [:classes class-id])]
-    (inflate-entity
-      engine-state
-      the-class
-      (merge the-class entity-state)
-      options)))
+    (->> (inflate-entity
+           engine-state
+           the-class
+           (merge the-class entity-state)
+           options)
+         (hooks/run state :inflate-class))))
 
 (defn inflate-race
   [engine-state race-id entity-state options]
@@ -94,11 +100,12 @@
                        (util/merge-entities
                          (get-in state [:races (:wish/parent-race-id subrace)])
                          subrace)))]
-    (inflate-entity
-      engine-state
-      the-race
-      (merge the-race entity-state)
-      options)))
+    (->> (inflate-entity
+           engine-state
+           the-race
+           (merge the-race entity-state)
+           options)
+         (hooks/run state :inflate-race))))
 
 (defn inflate-list
   ([engine-state entity options list-or-id]

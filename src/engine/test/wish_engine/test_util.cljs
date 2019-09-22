@@ -15,5 +15,6 @@
     state))
 
 (defn eval-state [& forms]
-  @(apply eval-state-ref forms))
+  (dissoc @(apply eval-state-ref forms)
+          :wish-engine/config))
 

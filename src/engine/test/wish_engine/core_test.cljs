@@ -17,6 +17,25 @@
       (is (some? loaded))
       (is (list? (get-in loaded [:5e/starting-eq 0]))))))
 
+(deftest hooks-test
+  (testing "load-source with quoted form"
+    (let [e (core/create-engine {:hooks
+                                 {:inflate-class
+                                  (fn [c]
+                                    (assoc c :attrs {:hook-ran? true}))}})
+          s (core/create-state e)
+          _ (core/load-source e s
+                              '(declare-class
+                                 {:id :captain}))
+          loaded (core/inflate-class
+                   s
+                   :captain
+                   {}
+                   {})]
+      (is (some? loaded))
+      (is (= {:hook-ran? true}
+             (:attrs loaded))))))
+
 (deftest inflate-entity-test
   (testing "Inflate entity"
     (let [{{f :base-feature} :features :as state}
