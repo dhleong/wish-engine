@@ -1,5 +1,6 @@
 (ns wish-engine.runtime.selectors
-  (:require [com.rpl.specter :as sp]))
+  (:require [com.rpl.specter :as sp]
+            [wish-engine.util :refer [form?]]))
 
 (def compilable-target
   (sp/recursive-path
@@ -8,7 +9,7 @@
       symbol? sp/STAY
       map? [sp/MAP-VALS p]
       vector? [sp/ALL-WITH-META p]
-      list? (sp/cond-path
+      form? (sp/cond-path
               ; ignore (quote) forms completely
               (sp/pred (fn [v] (= 'quote (first v))))
               sp/STOP
