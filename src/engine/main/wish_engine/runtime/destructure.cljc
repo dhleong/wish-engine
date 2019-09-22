@@ -1,20 +1,28 @@
 (ns wish-engine.runtime.destructure
-  (:require [wish-engine.util :refer [throw-msg]]))
+  (:require [wish-engine.runtime.config :as config]
+            [wish-engine.util :refer [throw-msg]]))
 
 (defn- destructure-from-map [symbols]
-  (let [arg-sym (gensym "map__")]
+  (let [arg-sym (gensym "map__")
+        get-sym (config/exported-fqn 'get)]
     {:bindings [arg-sym]
      :let (->> symbols
                (mapcat (fn [sym]
-                         [sym `(get ~arg-sym ~(keyword (name sym)))]))
+                         [sym `(~get-sym
+                                 ~arg-sym
+                                 ~(keyword (name sym)))]))
                vec)}))
 
 (defn- destructure-from-vector [symbols]
-  (let [arg-sym (gensym "vec__")]
+  (let [arg-sym (gensym "vec__")
+        nth-sym (config/exported-fqn 'nth)]
     {:bindings [arg-sym]
      :let (->> symbols
                (map-indexed (fn [index sym]
-                              [sym `(nth ~arg-sym ~index nil)]))
+                              [sym `(~nth-sym
+                                      ~arg-sym
+                                      ~index
+                                      nil)]))
                (apply concat)
                vec)}))
 
