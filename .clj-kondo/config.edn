@@ -1,0 +1,2 @@
+{:linters {:unresolved-symbol {:exclude [(com.rpl.specter/recursive-path)]}}
+ :lint-as {wish-engine.runtime.api/defn-api clojure.core/defn}}

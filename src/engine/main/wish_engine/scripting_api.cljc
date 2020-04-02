@@ -3,7 +3,8 @@
   (:require [wish-engine.runtime.api :refer-macros [defn-api]]
             [wish-engine.runtime.state :refer [*engine-state* *apply-context*]]
             [wish-engine.util :as util :refer [conj-set key-or-map?
-                                               throw-arg throw-msg]]
+                                               throw-arg throw-msg
+                                               warn]]
             [wish-engine.api.attr :as attr]
             [wish-engine.api.features :as features]))
 
@@ -244,7 +245,7 @@
 
   (fn list-items-by-id [state]
     (or (inflate-list state list-id)
-        (js/console.warn "Could not find list with ID " list-id))))
+        (warn "Could not find list with ID " list-id))))
 
 (defn-api options-of
   "Given a feature ID, returns a function of `state` that fetches the
@@ -263,7 +264,7 @@
         (util/selected-options state {:id feature-id})
 
         ; nothing
-        (js/console.warn "Could not find feature: " feature-id))))
+        (warn "Could not find feature: " feature-id))))
 
 (defn- add-to-list*
   [state fn-name id-or-spec entries]

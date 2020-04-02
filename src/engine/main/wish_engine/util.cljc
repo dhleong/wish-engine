@@ -8,6 +8,10 @@
 (def key-or-map? #(or (keyword? %)
                       (map? %)))
 
+(defn warn [& message]
+  #?(:cljs (apply js/console.warn message)
+     :clj (apply println message)))
+
 (defn throw-msg [& message]
   (throw #?(:cljs (js/Error. (apply str message))
             :clj (Exception. (apply str message)))))
@@ -49,7 +53,7 @@
   (or (feature-by-id state id)
       (get-in state [:list-entities id])
       (get-in state [:wish-engine/state :list-entities id])
-      (js/console.warn "Could not find entity with ID " id)))
+      (warn "Could not find entity with ID " id)))
 
 (defn instance-id [feature-id container-id instance-n]
   (keyword (namespace feature-id)
