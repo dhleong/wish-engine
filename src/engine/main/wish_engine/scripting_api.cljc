@@ -1,6 +1,7 @@
 (ns wish-engine.scripting-api
   "Public scripting API"
-  (:require [wish-engine.runtime.api :refer-macros [defn-api]]
+  (:require #?(:clj [wish-engine.runtime.api :refer [defn-api]]
+               :cljs [wish-engine.runtime.api :refer-macros [defn-api]])
             [wish-engine.runtime.state :refer [*engine-state* *apply-context*]]
             [wish-engine.util :as util :refer [conj-set key-or-map?
                                                throw-arg throw-msg
