@@ -2,7 +2,7 @@
   (:require [wish-engine.runtime.state :refer [*apply-context*]]
             [wish-engine.api.attr :as attr]
             [wish-engine.util :as util
-             :refer [conj-vec throw-arg throw-msg]]))
+             :refer [conj-vec throw-arg throw-msg warn]]))
 
 (def ^:private instance-keys [:wish/instance
                               :wish/instance-id])
@@ -137,9 +137,9 @@
 
     (when (and (not instanced?)
                (> next-instance 0))
-      (js/console.warn "Adding duplicate feature " id
-                       " from " apply-context
-                       " but it is not instanced"))
+      (warn "Adding duplicate feature " id
+            " from " apply-context
+            " but it is not instanced"))
 
     (if-not instanced?
       feature
@@ -235,5 +235,5 @@
                 apply-context id with-instance selected-options))
 
       ; trigger any on-provide (:!) fn on the feature and any of its
-      ; selected optiosn
+      ; selected options
       (on-provide with-instance selected-options))))
