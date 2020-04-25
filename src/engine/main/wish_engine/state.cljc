@@ -7,12 +7,15 @@
     "Combine another IEngineState instance with this one
      into a new IEngineState"))
 
+(defn- states-equiv? [this other]
+  (or (identical? this other)
+      (when other
+        (= @(.-state this) @(.-state other)))))
+
 (deftype SimpleEngineState [state]
   #?@(:clj [Object
             (equals [this other]
-                    (or (identical? this other)
-                        (when other
-                          (= @state @(.-state other)))))
+                    (states-equiv? this other))
             (hashCode [this]
                       (hash @state))]
 
@@ -22,16 +25,13 @@
 
              IEquiv
              (-equiv [this other]
-                     (or (identical? this other)
-                         (when other
-                           (= @state @(.-state other)))))
+                     (states-equiv? this other))
 
              IHash
              (-hash [this] (hash @state))])
 
-
   IEngineState
-  (plus [this ^IEngineState other]
+  (plus [this other]
     (SimpleEngineState. (atom (util/merge-entities
                                 @state
                                 @(.-state other)))))
