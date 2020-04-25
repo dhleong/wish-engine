@@ -197,15 +197,14 @@
   (features/provide *apply-context* state feature))
 
 (defn-api provide-features [state & features]
-  (loop [state state
-         features (flatten-lists
-                    "provide-features"
-                    key-or-map?
-                    features)]
-    (if-let [f (first features)]
-      (recur (provide-feature state f)
-             (rest features))
-      state)))
+  (->> features
+
+       (flatten-lists
+         "provide-features"
+         key-or-map?)
+
+       (reduce provide-feature
+               state)))
 
 
 ; ======= list handling ===================================
