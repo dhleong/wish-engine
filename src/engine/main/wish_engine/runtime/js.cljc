@@ -38,10 +38,11 @@
     (cons 'do body)))
 
 (defn set-assoc-stmt [map-name assoc-key assoc-value]
-  `(set! ~map-name
-         (assoc ~map-name
-                ~assoc-key
-                ~assoc-value)))
+  `(when-cljs
+     (set! ~map-name
+           (assoc ~map-name
+                  ~assoc-key
+                  ~assoc-value))))
 
 (defn export-fn-symbol-stmt [n exported-symbol]
   (let [exported-map-name 'exported-fns
