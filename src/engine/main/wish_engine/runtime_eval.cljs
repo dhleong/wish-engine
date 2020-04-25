@@ -62,9 +62,9 @@
 ; ======= Fn/macro export =================================
 
 ; start with these, which alias directly to JS functions
-(def exported-fns (merge {'ceil 'js/Math.ceil
-                          'floor 'js/Math.floor}
-                         api/exported-fns))
+(def ^:no-doc exported-fns (merge {'ceil 'js/Math.ceil
+                                   'floor 'js/Math.floor}
+                                  api/exported-fns))
 
 (export-fn + mathify)
 (export-fn - mathify)
@@ -242,7 +242,7 @@
             (last steps))))))
 
 ; most of this is borrowed from clojure.core
-(def exported-macros
+(def ^:no-doc exported-macros
   {'-> thread->
    '->> thread->>
 
