@@ -97,7 +97,8 @@
                        (binding [*apply-context* (:id m)]
                          (try
                            (existing-fn state)
-                           (catch :default e
+                           (catch #?(:clj Exception
+                                     :cljs :default) e
                              (throw (ex-info
                                       (str "Failed to apply " (:id m))
                                       m
