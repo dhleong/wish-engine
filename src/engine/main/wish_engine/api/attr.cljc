@@ -1,4 +1,4 @@
-(ns wish-engine.api.attr
+(ns ^:no-doc wish-engine.api.attr
   (:require [wish-engine.runtime.state :refer [*apply-context*]]
             [wish-engine.util :as util :refer [throw-arg]]))
 

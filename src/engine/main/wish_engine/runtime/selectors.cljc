@@ -1,4 +1,4 @@
-(ns wish-engine.runtime.selectors
+(ns ^:no-doc wish-engine.runtime.selectors
   (:require [com.rpl.specter :as sp]
             [wish-engine.util :refer [form?]]))
 

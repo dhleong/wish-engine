@@ -1,4 +1,4 @@
-(ns wish-engine.runtime.destructure
+(ns ^:no-doc wish-engine.runtime.destructure
   (:require [wish-engine.runtime.config :as config]
             [wish-engine.util :refer [throw-msg]]))
 

@@ -1,4 +1,4 @@
-(ns wish-engine.hooks
+(ns ^:no-doc wish-engine.hooks
   (:require [wish-engine.state :as state]))
 
 (defn run [engine-state hook-id entity]

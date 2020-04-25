@@ -1,4 +1,4 @@
-(ns wish-engine.util
+(ns ^:no-doc wish-engine.util
   (:require [wish-engine.runtime.state :refer [*apply-context*]]))
 
 (defn form? [v]

@@ -1,4 +1,4 @@
-(ns wish-engine.runtime
+(ns ^:no-doc wish-engine.runtime
   (:require [clojure.string :as str]
             [clojure.analyzer.api :refer-macros [no-warn]]
             [clojure.walk :refer [prewalk]]

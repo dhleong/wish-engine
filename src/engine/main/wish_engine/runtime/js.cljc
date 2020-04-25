@@ -1,4 +1,4 @@
-(ns wish-engine.runtime.js
+(ns ^:no-doc wish-engine.runtime.js
   "Macros for exposing fns to template functions"
   (:require [clojure.string :as str]
             [wish-engine.runtime.config :as config]))

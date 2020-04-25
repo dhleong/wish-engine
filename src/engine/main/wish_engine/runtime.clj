@@ -1,4 +1,4 @@
-(ns wish-engine.runtime
+(ns ^:no-doc wish-engine.runtime
   "Dummy engine implementation for JVM"
   (:require [clojure.edn :as edn]
             [wish-engine.edn :refer [edn-readers]]

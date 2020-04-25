@@ -16,10 +16,10 @@
       (not= -1 (.indexOf to-coerce ".")) (js/parseFloat to-coerce)
       :else (js/parseInt to-coerce))))
 
-(defn ^:export mathify [args]
+(defn ^{:export true :no-doc true} mathify [args]
   (map ->number args))
 
-(defn ^:export combinations
+(defn ^{:export true :no-doc true} combinations
   "Produce a lazy sequence of all combinations of elements of `seqs`,
    as eg: `(for [s1 (nth seqs 0), s2 (nth seqs 1)] [s1 s2])`"
   [seqs]
@@ -52,7 +52,7 @@
              e)
     e))
 
-(defn ^:export try-unsafe [fn-name form-str wrapped-fn]
+(defn ^{:export true :no-doc true} try-unsafe [fn-name form-str wrapped-fn]
   (try
     (wrapped-fn)
     (catch :default e
@@ -311,11 +311,11 @@
 
    })
 
-(defn ^:export vec-from-array [xs ^boolean no-clone]
+(defn ^{:export true :no-doc true} vec-from-array [xs ^boolean no-clone]
   (cljs.core/PersistentVector.fromArray xs no-clone))
 
-(defn ^:export map-from-array [arr ^boolean no-clone]
+(defn ^{:export true :no-doc true} map-from-array [arr ^boolean no-clone]
   (cljs.core/PersistentHashMap.fromArray arr no-clone))
 
-(defn ^:export map-from-arrays [ks vs]
+(defn ^{:export true :no-doc true} map-from-arrays [ks vs]
   (cljs.core/PersistentHashMap.fromArrays ks vs))

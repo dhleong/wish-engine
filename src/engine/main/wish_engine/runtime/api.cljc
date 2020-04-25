@@ -1,4 +1,4 @@
-(ns wish-engine.runtime.api
+(ns ^:no-doc wish-engine.runtime.api
   (:require [wish-engine.runtime.js :refer [export-fn-symbol-stmt
                                             set-assoc-stmt]]))
 

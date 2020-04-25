@@ -1,4 +1,4 @@
-(ns wish-engine.api.features
+(ns ^:no-doc wish-engine.api.features
   (:require [wish-engine.runtime.state :refer [*apply-context*]]
             [wish-engine.api.attr :as attr]
             [wish-engine.util :as util
