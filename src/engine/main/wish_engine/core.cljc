@@ -1,5 +1,6 @@
 (ns wish-engine.core
-  (:require [wish-engine.hooks :as hooks]
+  (:require [wish-engine.api.list :as list-api]
+            [wish-engine.hooks :as hooks]
             [wish-engine.model :as m]
             [wish-engine.runtime :as runtime]
             [wish-engine.scripting-api :as api]
@@ -115,7 +116,7 @@
   ([state list-or-id]
    (let [list-contents (cond
                          (keyword? list-or-id)
-                         (api/inflate-list
+                         (list-api/inflate
                            state
                            list-or-id)
 
