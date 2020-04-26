@@ -1,5 +1,6 @@
 (ns wish-engine.scripting-api-test
   (:require [cljs.test :refer-macros [deftest testing is]]
+            [wish-engine.api.list :as list-api]
             [wish-engine.test-util :refer [eval-form eval-state]]
             [wish-engine.core :as core]
             [wish-engine.scripting-api :as api]
@@ -414,7 +415,7 @@
       (is (= [{:id :mreynolds}
               {:id :zoe}
               {:id :itskaylee}]
-             (api/inflate-list state :crew)))))
+             (list-api/inflate state :crew)))))
 
   (testing "add items by id"
     (let [state (eval-state '(do
@@ -443,7 +444,7 @@
               {:id :zoe}
               {:id :mechanic/itskaylee}
               {:id :wishywash}]
-             (api/inflate-list
+             (list-api/inflate
                (assoc-in state [:list-entities :wishywash]
                          {:id :wishywash})
                :crew)))
@@ -452,7 +453,7 @@
               {:id :zoe}
               {:id :mechanic/itskaylee}
               {:id :wishywash}]
-             (api/inflate-list
+             (list-api/inflate
                (state/with-entity
                  state
                  {:id :serenity
@@ -475,7 +476,7 @@
       (is (= [{:id :mreynolds}
               {:id :zoe}
               {:id :itskaylee}]
-             (api/inflate-list state :crew)))))
+             (list-api/inflate state :crew)))))
 
   (testing "add items from feature option"
     (let [state (eval-state '(do
@@ -495,7 +496,7 @@
       (is (= [{:id :itskaylee}
               {:id :zoe}
               {:id :mreynolds}]
-             (api/inflate-list
+             (list-api/inflate
                {:wish-engine/options {:people [:itskaylee :zoe :mreynolds]}
                 :wish-engine/state state}
                :crew))))))
