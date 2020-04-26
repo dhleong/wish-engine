@@ -3,7 +3,6 @@
             [wish-engine.api.list :as list-api]
             [wish-engine.test-util :refer [eval-form eval-state]]
             [wish-engine.core :as core]
-            [wish-engine.scripting-api :as api]
             [wish-engine.state :as state]))
 
 (defn- ->ids [entities]
