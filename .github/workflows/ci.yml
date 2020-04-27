@@ -26,6 +26,7 @@ jobs:
         CI: true
 
   deploy-snapshot:
+    runs-on: ubuntu-latest
     needs: build
     if: github.ref == "refs/heads/master"
 
