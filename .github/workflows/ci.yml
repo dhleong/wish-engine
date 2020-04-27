@@ -31,6 +31,8 @@ jobs:
     if: github.ref == 'refs/heads/master'
 
     steps:
+      - uses: actions/checkout@v2
+
       - name: Extract snapshot version
         run: |
           echo ::set-env name=VERSION::$(head -n 1 project.clj | cut -d' ' -f 3 | sed 's/"//g')
