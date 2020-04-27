@@ -24,3 +24,15 @@ jobs:
         npm test
       env:
         CI: true
+
+  deploy-snapshot:
+    needs: build
+    if: github.ref == "refs/heads/master"
+
+    steps:
+      - name: Release snapshot to Clojars
+        env:
+          - VERSION=$(head -n 1 project.clj | cut -d' ' -f 3 | sed 's/"//g')
+        run: |
+          clj -Arelease --skip-tag --version $VERSION
+
