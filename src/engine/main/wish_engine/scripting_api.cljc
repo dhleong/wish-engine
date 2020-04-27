@@ -28,7 +28,25 @@
 
      (on-state
        (provide-feature :gunslinging)
-       (add-to-list :weapons :weapon/captains-pistol))"
+       (provide-to-list :weapons :weapon/captains-pistol))
+
+   In general, when providing things to an entity, whether features to an
+   entity, or items to a list, you can use:
+
+     1. A function of `state` that returns the value: This enables you to
+        refer to features that may be declared in other Data Sources, since
+        they may not exist at compile time. Several helpers for creating these
+        functions exist, such as [options-of] or [items-from-list].
+     2. A map: this represents an inline declaration of the feature at runtime,
+        as you provide it. This is commonly used for class features that won't
+        be referenced by other features.
+     3. A keyword: this is syntactic sugar for using the [by-id] function,
+        enabling you to easily reference a feature declared elsewhere.
+
+   In addition, for any `provide` or `declare` function that allows you to pass
+   multiple values, you can provide a mix of sequences and values, enabling you
+   to use strutures like `(map)` or list comprehension with `(for)` to generate
+   values."
   (:require #?(:clj [wish-engine.runtime.api :refer [defn-api]]
                :cljs [wish-engine.runtime.api :refer-macros [defn-api]])
             [wish-engine.api.util :refer [flatten-lists]]
@@ -78,6 +96,51 @@
              2 "nd"
              3 "rd"
              "th")))))
+
+
+; ======= Function factories ==============================
+
+(defn-api by-id
+  "Given an ID, returns a function of `state` that will fetch
+   the feature (or list item) with that ID"
+  [id]
+  (when-not (keyword? id)
+    (throw-arg "by-id" id
+               "entity id keyword"))
+
+  (fn entity-by-id [state]
+    (util/entity-by-id state id)))
+
+(defn-api items-from-list
+  "Given a list ID, returns a function of `state` that will fetch
+   the items from that list"
+  [list-id]
+  (when-not (keyword? list-id)
+    (throw-arg "items-from-list" list-id
+               "list id keyword"))
+
+  (fn list-items-by-id [state]
+    (or (list/inflate state list-id)
+        (warn "Could not find list with ID " list-id))))
+
+(defn-api options-of
+  "Given a feature ID, returns a function of `state` that fetches the
+   selected options of that feature"
+  [feature-id]
+  (when-not (keyword? feature-id)
+    (throw-arg "options-of" feature-id
+               "list id keyword"))
+
+  (fn feature-options-by-id [state]
+    (or (when-let [f (util/feature-by-id state feature-id)]
+          ; normal case
+          (util/selected-options state f))
+
+        ; implicit features, like spellcaster spell lists
+        (util/selected-options state {:id feature-id})
+
+        ; nothing
+        (warn "Could not find feature: " feature-id))))
 
 
 ; ======= top-level forms =================================
@@ -144,7 +207,7 @@
 ;;; Limited use
 ;;;
 
-(defn-api add-limited-use [state spec]
+(defn-api provide-limited-use [state spec]
   (when *engine-state*
     (throw-msg "add-limited-use must not be called at the top level."))
 
@@ -153,6 +216,11 @@
           (->> spec
                limited-use/validate-spec
                limited-use/compile-spec)))
+
+(defn-api add-limited-use
+  "Legacy alias for `provide-limited-use`"
+  [state spec]
+  (provide-limited-use state spec))
 
 
 ;;;
@@ -188,48 +256,6 @@
 
 ; ======= list handling ===================================
 
-(defn-api by-id
-  "Given an ID, returns a function of `state` that will fetch
-   the feature (or list item) with that ID"
-  [id]
-  (when-not (keyword? id)
-    (throw-arg "by-id" id
-               "entity id keyword"))
-
-  (fn entity-by-id [state]
-    (util/entity-by-id state id)))
-
-(defn-api items-from-list
-  "Given a list ID, returns a function of `state` that will fetch
-   the items from that list"
-  [list-id]
-  (when-not (keyword? list-id)
-    (throw-arg "items-from-list" list-id
-               "list id keyword"))
-
-  (fn list-items-by-id [state]
-    (or (list/inflate state list-id)
-        (warn "Could not find list with ID " list-id))))
-
-(defn-api options-of
-  "Given a feature ID, returns a function of `state` that fetches the
-   selected options of that feature"
-  [feature-id]
-  (when-not (keyword? feature-id)
-    (throw-arg "options-of" feature-id
-               "list id keyword"))
-
-  (fn feature-options-by-id [state]
-    (or (when-let [f (util/feature-by-id state feature-id)]
-          ; normal case
-          (util/selected-options state f))
-
-        ; implicit features, like spellcaster spell lists
-        (util/selected-options state {:id feature-id})
-
-        ; nothing
-        (warn "Could not find feature: " feature-id))))
-
 (defn- add-to-list*
   [state fn-name id-or-spec entries]
   (let [id (if (keyword? id-or-spec)
@@ -262,12 +288,26 @@
         (update dest-key merge (->map dest-entries))
         (update-in [:lists id] concat inflatable-entries))))
 
-(defn-api add-to-list
+(defn-api provide-to-list
+  "Provide one or more entries to a list. The list may either be declared by id or
+   with a list spec, which must be of the format:
+
+     {:id :my-list
+      :type :up-to-you}
+
+   If the `:type` is `:feature`, each map item of `entries` will be treated
+   as `(provide-feature)`.
+   "
   [state id-or-spec & entries]
   (when *engine-state*
     (throw-msg "add-to-list must not be called at the top level. Try `declare-list`"))
 
   (add-to-list* state "add-to-list" id-or-spec entries))
+
+(defn-api add-to-list
+  "Legacy alias of `provide-to-list`"
+  [state id-or-spec & entries]
+  (apply provide-to-list state id-or-spec entries))
 
 (defn-api declare-list [id-or-spec & entries]
   (when-not *engine-state*
