@@ -43,6 +43,9 @@ jobs:
           tools-deps: latest
 
       - name: Release snapshot to Clojars
+        env:
+          CLOJARS_USERNAME: ${{ secrets.CLOJARS_USERNAME }}
+          CLOJARS_PASSWORD: ${{ secrets.CLOJARS_PASSWORD }}
         run: |
           echo $VERSION
           clojure -Arelease --skip-tag --version $VERSION
