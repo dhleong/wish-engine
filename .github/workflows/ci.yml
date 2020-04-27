@@ -30,9 +30,12 @@ jobs:
     if: github.ref == "refs/heads/master"
 
     steps:
-      - name: Release snapshot to Clojars
-        env:
-          - VERSION=$(head -n 1 project.clj | cut -d' ' -f 3 | sed 's/"//g')
+      - name: Extract snapshot version
         run: |
+          echo ::set-env name=VERSION::$(head -n 1 project.clj | cut -d' ' -f 3 | sed 's/"//g')
+
+      - name: Release snapshot to Clojars
+        run: |
+          echo $VERSION
           clj -Arelease --skip-tag --version $VERSION
 
