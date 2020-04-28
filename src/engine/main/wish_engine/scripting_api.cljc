@@ -17,9 +17,10 @@
    functions are invoked on an entity state map, and return the new state,
    allowing them to be used easily in pipelines to gradually add features, etc.
 
-   In general, any feature can have a runtime operation attached to it (using
-   the `:!` key) which will be applied to an entity state when the feature is
-   attached it. Such functions have a simple signature:
+   In general, any feature can have a runtime operation attached to it (also
+   known as an `on-provide` function, using the `:!` key) which will be applied
+   to an entity state when the feature is attached it. Such functions have a
+   simple signature:
 
      (fn [state] state)
 
@@ -34,9 +35,9 @@
    entity, or items to a list, you can use:
 
      1. A function of `state` that returns the value: This enables you to
-        refer to features that may be declared in other Data Sources, since
-        they may not exist at compile time. Several helpers for creating these
-        functions exist, such as [options-of] or [items-from-list].
+        refer to values that may be declared in other Data Sources, or which
+        are dynamically added by other features at runtime. Several helpers for
+        creating these functions exist, such as [options-of] or [items-from-list].
      2. A map: this represents an inline declaration of the feature at runtime,
         as you provide it. This is commonly used for class features that won't
         be referenced by other features.
@@ -227,7 +228,35 @@
 ;;; Provide attr
 ;;;
 
-(defn-api provide-attr [state attr-id-or-path value]
+(defn-api provide-attr
+  "Provide an attribute to the entity, explictly. Attributes are used for
+   sheet-specific data, and can store permanent or temporary state. The path
+   can be a simple keyword or a sequence of keywords, and the value may be of
+   any type.
+
+   A common pattern for providing multiple values for an attribute is to share
+   a top-level key and store values in a sub-key based on the feature. For
+   example, an item with ID `:armor/browncoat` that provides a +2 bonus to AC
+   when equipped might look like:
+
+     {:id :armor/browncoat
+      :name \"An old coat from another time\"
+      :! (on-state
+           (provide-attr [:buffs :ac :armor/browncoat] 2))}
+
+   Then in order to compute the total AC bonuses at runtime, client code can
+   do something like:
+
+     (->> (get-in entity [:attrs :buffs :ac])
+          vals
+          (apply +))
+
+   This structure allows on-provide functions to provide attributes in
+   an idempotent way.
+
+   The ID of the feature that provided this attribute (IE :armor/browncoat
+   in the above example) will be stored at [:attrs/meta ...path]."
+  [state attr-id-or-path value]
   (when *engine-state*
     (throw-msg "provide-attr must not be called at the top level."))
 
@@ -237,7 +266,10 @@
 ;;; Provide Feature
 ;;;
 
-(defn-api provide-feature [state feature]
+(defn-api provide-feature
+  "Provide a Feature to the entity. `feature` may be an ID keyword or a map,
+   declaring the feature inline. See `declare-feature`"
+  [state feature]
   (when *engine-state*
     (throw-msg "provide-feature(s) must not be called at the top level. Try `declare-features`"))
 
