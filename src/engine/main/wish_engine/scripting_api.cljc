@@ -208,7 +208,36 @@
 ;;; Limited use
 ;;;
 
-(defn-api provide-limited-use [state spec]
+(defn-api provide-limited-use
+  "Provide a limited-use item, stored at `[:limited-uses id]` in the
+   entity. wish-engine does little with these directly, but as features
+   that may only be used a limited number of times are core to most
+   RPG systems, limited-use is a core function of wish.
+
+   Here's a real example from Wish:
+
+     (provide-limited-use
+       {:id :sorcerer/points#uses
+        :name \"Sorcery Points\"
+        :uses (fn [#{level}] level)
+        :restore-trigger (fn [#{level}]
+                           (if (< 20 level)
+                             :long-rest
+                             :short-rest))
+        :restore-amount
+          (fn [#{trigger used level}]
+            (if (= :short-rest trigger)
+              (when (= 20 level) (min used 4))
+              used))})
+
+   Note the naming with the providing feature followed by the `#uses`
+   suffix. This is not required, but is a common convention. The entity
+   state will be passed to both the `:uses` and `:restore-amount` functions,
+   enabling you to scale uses programmatically. They may both alternatively
+   be declared statically. wish-engine will compile `:restore-amount` to a
+   function, and even provide a default value that restores everything, if
+   omitted."
+  [state spec]
   (when *engine-state*
     (throw-msg "add-limited-use must not be called at the top level."))
 
@@ -255,7 +284,7 @@
    an idempotent way.
 
    The ID of the feature that provided this attribute (IE :armor/browncoat
-   in the above example) will be stored at [:attrs/meta ...path]."
+   in the above example) will be stored at `[:attrs/meta ...path]`."
   [state attr-id-or-path value]
   (when *engine-state*
     (throw-msg "provide-attr must not be called at the top level."))
