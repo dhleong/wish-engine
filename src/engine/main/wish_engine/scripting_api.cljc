@@ -25,11 +25,24 @@
      (fn [state] state)
 
    To simplify implementation, the `on-state` macro is provided, which
-   automatically threads the given state through. It might be used like:
+   automatically threads the given `state` through. It might be used like:
 
      (on-state
        (provide-feature :gunslinging)
        (provide-to-list :weapons :weapon/captains-pistol))
+
+   An extra value of having `state` provided at runtime to this function is
+   that you can access things like `:level` in order to dynamically change
+   the behavior of features, limited-uses, etc.---without requiring special
+   support from the sheet! For example:
+
+     (on-state
+       (provide-limited-use
+         {:id :gunslinging/precision-shot
+          :uses (:level state)))
+
+   Note that the `on-state` macro provides the state with the implicit name
+   `state`, as in the signature described above.
 
    In general, when providing things to an entity, whether features to an
    entity, or items to a list, you can use:
@@ -216,19 +229,25 @@
 
    Here's a real example from Wish:
 
-     (provide-limited-use
-       {:id :sorcerer/points#uses
-        :name \"Sorcery Points\"
-        :uses (fn [#{level}] level)
-        :restore-trigger (fn [#{level}]
-                           (if (< 20 level)
+     (on-state
+       (provide-limited-use
+         {:id :sorcerer/points#uses
+          :name \"Sorcery Points\"
+          :uses (fn [#{level}] level)
+          :restore-trigger (if (< (:level state) 20)
                              :long-rest
-                             :short-rest))
-        :restore-amount
+
+                             ; NOTE: trigger on *both*; a long rest triggers
+                             ; both, but if we don't declare both we will only
+                             ; see :short-rest
+                             #{:short-rest :long-rest})
+          :restore-desc (when (= (:level state) 20)
+                          \"20 / Long Rest; 4 / Short Rest\")
+          :restore-amount
           (fn [#{trigger used level}]
             (if (= :short-rest trigger)
               (when (= 20 level) (min used 4))
-              used))})
+              used))}))
 
    Note the naming with the providing feature followed by the `#uses`
    suffix. This is not required, but is a common convention. The entity
@@ -236,7 +255,11 @@
    enabling you to scale uses programmatically. They may both alternatively
    be declared statically. wish-engine will compile `:restore-amount` to a
    function, and even provide a default value that restores everything, if
-   omitted."
+   omitted.
+
+   Also note that, as elsewhere, the current state of the entity is available
+   as `state` (from the on-state macro), so we can access things like `:level`
+   in order to change the behavior at runtime."
   [state spec]
   (when *engine-state*
     (throw-msg "add-limited-use must not be called at the top level."))
