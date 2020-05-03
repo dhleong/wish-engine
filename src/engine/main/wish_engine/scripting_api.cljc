@@ -22,24 +22,24 @@
    to an entity state when the feature is attached it. Such functions have a
    simple signature:
 
-     (fn [state] state)
+       (fn [state] state)
 
    To simplify implementation, the `on-state` macro is provided, which
    automatically threads the given `state` through. It might be used like:
 
-     (on-state
-       (provide-feature :gunslinging)
-       (provide-to-list :weapons :weapon/captains-pistol))
+       (on-state
+         (provide-feature :gunslinging)
+         (provide-to-list :weapons :weapon/captains-pistol))
 
    An extra value of having `state` provided at runtime to this function is
    that you can access things like `:level` in order to dynamically change
    the behavior of features, limited-uses, etc.---without requiring special
    support from the sheet! For example:
 
-     (on-state
-       (provide-limited-use
-         {:id :gunslinging/precision-shot
-          :uses (:level state)))
+       (on-state
+         (provide-limited-use
+           {:id :gunslinging/precision-shot
+            :uses (:level state)))
 
    Note that the `on-state` macro provides the state with the implicit name
    `state`, as in the signature described above.
@@ -229,13 +229,13 @@
 
    Here's a real example from Wish:
 
-     (on-state
-       (provide-limited-use
-         {:id :sorcerer/points#uses
-          :name \"Sorcery Points\"
-          :uses (fn [#{level}] level)
-          :restore-trigger (if (< (:level state) 20)
-                             :long-rest
+       (on-state
+         (provide-limited-use
+           {:id :sorcerer/points#uses
+            :name \"Sorcery Points\"
+            :uses (fn [#{level}] level)
+            :restore-trigger (if (< (:level state) 20)
+                               :long-rest
 
                              ; NOTE: trigger on *both*; a long rest triggers
                              ; both, but if we don't declare both we will only
