@@ -8,8 +8,8 @@
    Compile-time, or \"top-level,\" operation occurs when the Data Source is
    initially loaded, and is used to declare all the primary entities that might
    be used to build a character. As such, all compile-time functions are named
-   with the `declare-` prefix, such as `declare-class`.  Compile-time functions
-   may *only* be used at compile-time.
+   with the `declare-` prefix, such as [[declare-class]].  Compile-time
+   functions may *only* be used at compile-time.
 
    Runtime operation occurs when a character sheet is in use, with the purpose
    of building upon a primary entity (such as a Class) based on user-selected
@@ -22,24 +22,30 @@
    to an entity state when the feature is attached it. Such functions have a
    simple signature:
 
-       (fn [state] state)
+   ```clojure
+     (fn [state] state)
+   ```
 
    To simplify implementation, the `on-state` macro is provided, which
    automatically threads the given `state` through. It might be used like:
 
-       (on-state
-         (provide-feature :gunslinging)
-         (provide-to-list :weapons :weapon/captains-pistol))
+   ```clojure
+     (on-state
+       (provide-feature :gunslinging)
+       (provide-to-list :weapons :weapon/captains-pistol))
+   ```
 
    An extra value of having `state` provided at runtime to this function is
    that you can access things like `:level` in order to dynamically change
    the behavior of features, limited-uses, etc.---without requiring special
    support from the sheet! For example:
 
-       (on-state
-         (provide-limited-use
-           {:id :gunslinging/precision-shot
-            :uses (:level state)))
+   ```clojure
+     (on-state
+       (provide-limited-use
+         {:id :gunslinging/precision-shot
+          :uses (:level state)))
+   ```
 
    Note that the `on-state` macro provides the state with the implicit name
    `state`, as in the signature described above.
@@ -54,7 +60,7 @@
      2. A map: this represents an inline declaration of the feature at runtime,
         as you provide it. This is commonly used for class features that won't
         be referenced by other features.
-     3. A keyword: this is syntactic sugar for using the [by-id] function,
+     3. A keyword: this is syntactic sugar for using the [[by-id]] function,
         enabling you to easily reference a feature declared elsewhere.
 
    In addition, for any `provide` or `declare` function that allows you to pass
@@ -98,8 +104,8 @@
     coll))
 
 (defn-api ordinal
-  "Given an integer, returns the English ordinal string, EG: 1 -> 1st, 2 -
-   >2nd, etc."
+  "Given an integer, returns the English ordinal string, EG: 1 -> 1st, 2 ->
+   2nd, etc."
   [n]
   (str n
        (if (<= 11 n 19)
@@ -126,8 +132,8 @@
     (util/entity-by-id state id)))
 
 (defn-api items-from-list
-  "Given a list ID, returns a function of `state` that will fetch
-   the items from that list"
+  "Given a list ID, returns a function of `state` that will fetch the items
+   from that list"
   [list-id]
   (when-not (keyword? list-id)
     (throw-arg "items-from-list" list-id
@@ -229,13 +235,14 @@
 
    Here's a real example from Wish:
 
-       (on-state
-         (provide-limited-use
-           {:id :sorcerer/points#uses
-            :name \"Sorcery Points\"
-            :uses (fn [#{level}] level)
-            :restore-trigger (if (< (:level state) 20)
-                               :long-rest
+   ```clojure
+     (on-state
+       (provide-limited-use
+         {:id :sorcerer/points#uses
+          :name \"Sorcery Points\"
+          :uses (fn [#{level}] level)
+          :restore-trigger (if (< (:level state) 20)
+                             :long-rest
 
                              ; NOTE: trigger on *both*; a long rest triggers
                              ; both, but if we don't declare both we will only
@@ -248,6 +255,7 @@
             (if (= :short-rest trigger)
               (when (= 20 level) (min used 4))
               used))}))
+   ```
 
    Note the naming with the providing feature followed by the `#uses`
    suffix. This is not required, but is a common convention. The entity
@@ -258,8 +266,8 @@
    omitted.
 
    Also note that, as elsewhere, the current state of the entity is available
-   as `state` (from the on-state macro), so we can access things like `:level`
-   in order to change the behavior at runtime."
+   as `state` (from the `on-state` macro), so we can access things like
+   `:level` in order to change the behavior at runtime."
   [state spec]
   (when *engine-state*
     (throw-msg "add-limited-use must not be called at the top level."))
@@ -291,17 +299,21 @@
    example, an item with ID `:armor/browncoat` that provides a +2 bonus to AC
    when equipped might look like:
 
+   ```clojure
      {:id :armor/browncoat
       :name \"An old coat from another time\"
       :! (on-state
            (provide-attr [:buffs :ac :armor/browncoat] 2))}
+   ```
 
    Then in order to compute the total AC bonuses at runtime, client code can
    do something like:
 
+   ```clojure
      (->> (get-in entity [:attrs :buffs :ac])
           vals
           (apply +))
+   ```
 
    This structure allows on-provide functions to provide attributes in
    an idempotent way.
@@ -320,7 +332,7 @@
 
 (defn-api provide-feature
   "Provide a Feature to the entity. `feature` may be an ID keyword or a map,
-   declaring the feature inline. See `declare-feature`"
+   declaring the feature inline. See [[declare-feature]]"
   [state feature]
   (when *engine-state*
     (throw-msg "provide-feature(s) must not be called at the top level. Try `declare-features`"))
@@ -376,11 +388,13 @@
   "Provide one or more entries to a list. The list may either be declared by id or
    with a list spec, which must be of the format:
 
+   ```clojure
      {:id :my-list
       :type :up-to-you}
+   ```
 
    If the `:type` is `:feature`, each map item of `entries` will be treated
-   as `(provide-feature)`.
+   as [[provide-feature]].
    "
   [state id-or-spec & entries]
   (when *engine-state*
