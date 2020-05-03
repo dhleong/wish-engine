@@ -332,7 +332,7 @@
 
 (defn-api provide-feature
   "Provide a Feature to the entity. `feature` may be an ID keyword or a map,
-   declaring the feature inline. See [[declare-feature]]"
+   declaring the feature inline. See [[declare-features]]"
   [state feature]
   (when *engine-state*
     (throw-msg "provide-feature(s) must not be called at the top level. Try `declare-features`"))
