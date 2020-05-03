@@ -105,7 +105,7 @@ an idempotent way.
 
 The ID of the feature that provided this attribute (IE :armor/browncoat
 in the above example) will be stored at `[:attrs/meta ...path]`.</pre></div></div><div class="public anchor" id="var-provide-feature"><h3>provide-feature</h3><div class="usage"><code>(provide-feature state feature)</code></div><div class="doc"><pre class="plaintext">Provide a Feature to the entity. `feature` may be an ID keyword or a map,
-declaring the feature inline. See [[declare-feature]]</pre></div></div><div class="public anchor" id="var-provide-features"><h3>provide-features</h3><div class="usage"><code>(provide-features state &amp; features)</code></div><div class="doc"><pre class="plaintext"></pre></div></div><div class="public anchor" id="var-provide-limited-use"><h3>provide-limited-use</h3><div class="usage"><code>(provide-limited-use state spec)</code></div><div class="doc"><pre class="plaintext">Provide a limited-use item, stored at `[:limited-uses id]` in the
+declaring the feature inline. See [[declare-features]]</pre></div></div><div class="public anchor" id="var-provide-features"><h3>provide-features</h3><div class="usage"><code>(provide-features state &amp; features)</code></div><div class="doc"><pre class="plaintext"></pre></div></div><div class="public anchor" id="var-provide-limited-use"><h3>provide-limited-use</h3><div class="usage"><code>(provide-limited-use state spec)</code></div><div class="doc"><pre class="plaintext">Provide a limited-use item, stored at `[:limited-uses id]` in the
 entity. wish-engine does little with these directly, but as features
 that may only be used a limited number of times are core to most
 RPG systems, limited-use is a core function of wish.
