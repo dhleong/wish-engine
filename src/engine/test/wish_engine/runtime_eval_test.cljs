@@ -1,5 +1,6 @@
 (ns wish-engine.runtime-eval-test
   (:require [cljs.test :refer-macros [deftest testing is]]
+            [wish-engine.core :as core]
             [wish-engine.test-util :refer [eval-form eval-state]]))
 
 (deftest basic-test
@@ -37,11 +38,17 @@
                   '(doseq [list-id [:captain :crew]]
                      (declare-list
                        list-id
-                       :sidearm)))]
-      (is (= [:sidearm]
-             (get-in state [:lists :captain])))
-      (is (= (get-in state [:lists :captain])
-             (get-in state [:lists :crew]))))))
+                       {:id :sidearm})))]
+      (is (= [{:id :sidearm}]
+             (core/inflate-entities
+               state
+               (get-in state [:lists :captain]))))
+      (is (= (core/inflate-entities
+               state
+               (get-in state [:lists :captain]))
+             (core/inflate-entities
+               state
+               (get-in state [:lists :crew])))))))
 
 (deftest fn-test
   (testing "Support destructuring args"
