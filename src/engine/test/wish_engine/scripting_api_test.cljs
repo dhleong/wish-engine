@@ -226,7 +226,62 @@
                               {:weapon/spare [:vera]}
                               :wish-engine/state state})]
         (is (= {:vera true}
-               (:attrs inflated)))))))
+               (:attrs inflated))))))
+
+  (testing "Support using items-from-list with a by-id list"
+    (let [{{f :crew-member} :classes :as state}
+          (eval-state
+            '(declare-features
+               {:id :weapon
+                :max-options 1
+                :values (let [fetch-items (items-from-list :ranged-weapons)]
+                          (fn [state]
+                            (filter
+                              (fn [item]
+                                (= :long (:range item)))
+                              (fetch-items state))))
+                :! (on-state
+                     (add-to-list
+                       :crew/weapon
+                       (options-of :weapon)))})
+
+            '(declare-list
+               {:id :all-weapons
+                :type :weapons}
+               {:id :knife
+                :! (on-state (provide-attr :knife true))}
+               {:id :pistol
+                :range :short
+                :! (on-state (provide-attr :pistol true))}
+               {:id :rifle
+                :range :long
+                :! (on-state (provide-attr :rifle true))}
+               {:id :vera
+                :range :long
+                :! (on-state (provide-attr :vera true))})
+
+            '(declare-list
+               {:id :ranged-weapons
+                :type :weapons}
+               :pistol
+               :rifle
+               :vera)
+
+            '(declare-class
+               {:id :crew-member
+                :! (on-state
+                     (provide-features :weapon))}))
+          state! (:! f)]
+      (is (ifn? state!))
+      (is (empty? (:attrs (state! {:wish-engine/state state}))))
+      (let [values (->> (state! {:wish-engine/state state})
+                        :wish-engine/state
+                        :features
+                        :weapon
+                        :values)
+            inflated (core/inflate-entities state values)]
+        (is (seq inflated))
+        (is (every? map? inflated))))))
 
 (deftest availability-attr-test
   (testing "Just :availability-attr"

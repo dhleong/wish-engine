@@ -14,7 +14,11 @@
                      (get-in state [:wish-engine/state :lists list-id]))
              seq
              (mapcat (fn [entry]
-                       (when-let [results (if (fn? entry)
-                                            (entry state)
-                                            entry)]
+                       (when-let [results (cond
+                                            ;; *should* be handled by
+                                            ;; add-to-list*, but just in
+                                            ;; case...
+                                            (keyword? entry) (util/entity-by-id state entry)
+                                            (fn? entry) (entry state)
+                                            :else entry)]
                          (util/sequentialify results)))))))

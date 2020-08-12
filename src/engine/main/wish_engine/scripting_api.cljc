@@ -372,8 +372,8 @@
         inflatable-entries (map (fn [e]
                                   (cond
                                     (map? e) (by-id (:id e))
-                                    (ifn? e) e  ; easy case
                                     (keyword? e) (by-id e)
+                                    (ifn? e) e  ; easy case
                                     :else (throw-arg fn-name e
                                                      (str "id, map, or functional"
                                                           "; was " (or (type e)
