@@ -16,6 +16,6 @@ documentation is generated from source, and can be found at [cljdoc][3], with
 the latest snapshot always available [here][4].
 
 [1]: https://github.com/dhleong/wish
-[2]: https://github.com/dhleong/wish/tree/master/resources/sources/dnd5e
+[2]: https://github.com/dhleong/wish/tree/main/resources/sources/dnd5e
 [3]: https://cljdoc.org/d/wish-engine/wish-engine/0.1.0-SNAPSHOT/api/wish-engine.scripting-api
 [4]: https://dhleong.github.io/wish-engine
