@@ -77,7 +77,8 @@
             [wish-engine.api.attr :as attr]
             [wish-engine.api.features :as features]
             [wish-engine.api.limited-use :as limited-use]
-            [wish-engine.api.list :as list]))
+            [wish-engine.api.list :as list]
+            [wish-engine.api.mods :as mods]))
 
 
 (def ^:no-doc exported-fns {})
@@ -276,7 +277,8 @@
           assoc (:id spec)
           (->> spec
                limited-use/validate-spec
-               limited-use/compile-spec)))
+               limited-use/compile-spec
+               (mods/with-mods state))))
 
 (defn-api add-limited-use
   "Legacy alias for `provide-limited-use`"
@@ -411,3 +413,17 @@
   (when-not *engine-state*
     (throw-msg "declare-list must be called at the top level. Try `add-to-list`"))
   (swap! *engine-state* add-to-list* "declare-list" id-or-spec entries))
+
+
+; ======= Feature augmentation ============================
+
+(defn-api provide-mod
+  "Provide a modification to an entity."
+  [state mod-id entity-id f]
+  (when *engine-state*
+    (throw-msg "provide-mod must not be called at the top level."))
+
+  (let [mod-fn (vary-meta f assoc :mod-id mod-id)]
+    (-> state
+        (assoc-in [:mods entity-id mod-id] mod-fn)
+        (mods/install entity-id mod-fn))))

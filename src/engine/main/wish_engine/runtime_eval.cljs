@@ -99,6 +99,7 @@
 (export-fn vec)
 
 (export-fn assoc)
+(export-fn update)
 (export-fn keys)
 (export-fn vals)
 

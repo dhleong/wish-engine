@@ -554,3 +554,48 @@
                {:wish-engine/options {:people [:itskaylee :zoe :mreynolds]}
                 :wish-engine/state state}
                :crew))))))
+
+(deftest provide-mod-test
+  (let [{{f :serenity f' :fuel-upgrade}
+         :features}
+        (eval-state
+          '(declare-features
+             {:id :fuel-upgrade
+              :! (on-state
+                   (provide-mod
+                     :fuel-upgrade#mod
+                     :fuel#uses
+                     (fn [entity]
+                       (update entity :restore-amount
+                               (partial comp
+                                        (fn [v]
+                                          (+ v 2)))))))}
+
+             {:id :serenity
+              :! (on-state
+                   (provide-limited-use
+                     {:id :fuel#uses
+                      :name "Fuel"
+                      :restore-amount 2}))}))
+        state-pre! (comp (:! f') (:! f))
+        state-post! (comp (:! f) (:! f'))
+        state-multi-apply! (comp (:! f') (:! f) (:! f'))]
+
+    (testing "Modify a limited-use pre-declaration"
+      (let [s (state-pre! {})
+            limited-use (get-in s [:limited-uses :fuel#uses])]
+        (is (ifn? (:restore-amount limited-use)))
+        (is (= 4 ((:restore-amount limited-use) {:used 42})))))
+
+    (testing "Modify a limited-use post-declaration"
+      (let [s (state-post! {})
+            limited-use (get-in s [:limited-uses :fuel#uses])]
+        (is (ifn? (:restore-amount limited-use)))
+        (is (= 4 ((:restore-amount limited-use) {:used 42})))))
+
+    (testing "Don't apply a mod multiple times"
+      (let [s (state-multi-apply! {})
+            limited-use (get-in s [:limited-uses :fuel#uses])]
+        (is (ifn? (:restore-amount limited-use)))
+        (is (= 4 ((:restore-amount limited-use) {:used 42}))))))
+  )
