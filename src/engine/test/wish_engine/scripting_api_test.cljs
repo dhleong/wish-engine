@@ -598,4 +598,55 @@
             limited-use (get-in s [:limited-uses :fuel#uses])]
         (is (ifn? (:restore-amount limited-use)))
         (is (= 4 ((:restore-amount limited-use) {:used 42}))))))
-  )
+
+  (testing "(update) syntax"
+    (let [{{f :serenity f' :fuel-upgrade}
+           :features}
+          (eval-state
+            '(declare-features
+               {:id :fuel-upgrade
+                :! (on-state
+                     (provide-mod
+                       :fuel-upgrade#mod
+                       :fuel#uses
+                       :restore-amount
+                       (fn [original-fn]
+                         (fn [arg]
+                           (+ (original-fn arg) 2)))))}
+
+               {:id :serenity
+                :! (on-state
+                     (provide-limited-use
+                       {:id :fuel#uses
+                        :name "Fuel"
+                        :restore-amount 2}))}))
+          state! (comp (:! f') (:! f))
+          s (state! {})
+          limited-use (get-in s [:limited-uses :fuel#uses])]
+      (is (ifn? (:restore-amount limited-use)))
+      (is (= 4 ((:restore-amount limited-use) {:used 42}))))))
+
+(deftest provide-scalar-mod-test
+  (testing "Scalar mod for fn value"
+    (let [{{f :serenity f' :fuel-upgrade}
+           :features}
+          (eval-state
+            '(declare-features
+               {:id :fuel-upgrade
+                :! (on-state
+                     (provide-scalar-mod
+                       :fuel-upgrade#mod
+                       :fuel#uses
+                       :restore-amount + 2))}
+
+               {:id :serenity
+                :! (on-state
+                     (provide-limited-use
+                       {:id :fuel#uses
+                        :name "Fuel"
+                        :restore-amount 2}))}))
+          state! (comp (:! f') (:! f))
+          s (state! {})
+          limited-use (get-in s [:limited-uses :fuel#uses])]
+      (is (ifn? (:restore-amount limited-use)))
+      (is (= 4 ((:restore-amount limited-use) {:used 42}))))))
