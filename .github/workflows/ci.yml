@@ -35,7 +35,7 @@ jobs:
 
       - name: Extract snapshot version
         run: |
-          echo ::set-env name=VERSION::$(head -n 1 project.clj | cut -d' ' -f 3 | sed 's/"//g')
+          echo "VERSION="$(head -n 1 project.clj | cut -d' ' -f 3 | sed 's/"//g') >> $GITHUB_ENV
 
       - name: Setup clj tools
         uses: DeLaGuardo/setup-clojure@master
