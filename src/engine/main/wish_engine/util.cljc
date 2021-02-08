@@ -77,11 +77,19 @@
     base item))
 
 (defn merge-entities [a b]
+  (when-not (and (map? a) (map? b))
+    (throw (ex-info "Arguments to merge-entities must both be maps"
+                    {:a a :b b})))
+
   (merge-with
     (fn [a b]
       (cond
-        (map? a)
+        (and (map? a) (map? b))
         (merge-entities a b)
+
+        ; non-heterogeneous... just pick newer
+        (or (map? a) (map? b))
+        b
 
         (coll? a)
         (concat a b)
