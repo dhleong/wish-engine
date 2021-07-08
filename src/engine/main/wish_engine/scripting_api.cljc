@@ -77,7 +77,8 @@
             [wish-engine.api.attr :as attr]
             [wish-engine.api.features :as features]
             [wish-engine.api.limited-use :as limited-use]
-            [wish-engine.api.list :as list]))
+            [wish-engine.api.list :as list]
+            [wish-engine.api.mods :as mods]))
 
 
 (def ^:no-doc exported-fns {})
@@ -276,7 +277,8 @@
           assoc (:id spec)
           (->> spec
                limited-use/validate-spec
-               limited-use/compile-spec)))
+               limited-use/compile-spec
+               (mods/with-mods state))))
 
 (defn-api add-limited-use
   "Legacy alias for `provide-limited-use`"
@@ -411,3 +413,76 @@
   (when-not *engine-state*
     (throw-msg "declare-list must be called at the top level. Try `add-to-list`"))
   (swap! *engine-state* add-to-list* "declare-list" id-or-spec entries))
+
+
+; ======= Feature augmentation ============================
+
+(defn-api provide-mod
+  "Provide a modification to an entity. The mod fn `f` will be called
+   with the *compiled* entity, which means that any properties which
+   are typically compiled into functions will be compiled as such before
+   `f` is called.
+
+   The alternative arity is used like `(update)` to modify a specific key
+   of the entity, given the compiled value for that key.
+
+   To modify a limited use to restore more, for example:
+
+   ```clojure
+     (declare-feature
+       {:id :fuel-upgrade
+        :! (on-state
+             (provide-mod
+               :fuel-upgrade#mod
+               :fuel#uses
+               :restore-amount
+               (fn [original-fn]
+                 (fn [arg]
+                   (+ (original-fn arg) 2)))))})
+   ```
+
+   For a simpler way to perform the common case of augmenting scalar
+   values, see [[provide-scalar-mod]]."
+  ([state mod-id entity-id f]
+   (when *engine-state*
+     (throw-msg "provide-mod must not be called at the top level."))
+
+   (let [mod-fn (vary-meta f assoc :mod-id mod-id)]
+     (-> state
+         (assoc-in [:mods entity-id mod-id] mod-fn)
+         (mods/install entity-id mod-fn))))
+
+  ([state mod-id entity-id entity-key f & args]
+   (provide-mod
+     state mod-id entity-id
+     (fn mod-entity-by-key [entity]
+       (apply update entity entity-key f args)))))
+
+(defn-api provide-scalar-mod
+  "An alternative to [[provide-mod]] with simpler semantics for common
+   scenarios. Specifically, the mod fn `f` will be provided with a scalar
+   value, even if `entity-key` points to a value that is compiled to a
+   function. In such a case, the value provided to `f` will be the result
+   of evaluating the original value with its original, expected arguments.
+
+   ```clojure
+     (declare-feature
+       {:id :fuel-upgrade
+        :! (on-state
+             (provide-scalar-mod
+               :fuel-upgrade#mod
+               :fuel#uses
+               :restore-amount + 2))})
+   ```
+
+   This feature will modify the `:restore-amount` fn attached to the
+   `:fuel#uses` limited use to add `2` to the original value."
+  [state mod-id entity-id entity-key f & args]
+  (provide-mod
+    state mod-id entity-id entity-key
+    (fn simple-key-updater [original-value]
+      (if-not (ifn? original-value)
+        (apply f original-value args)
+
+        (fn modified-entity-key-fn [input]
+          (apply f (original-value input) args))))))
