@@ -432,7 +432,7 @@
      (declare-feature
        {:id :fuel-upgrade
         :! (on-state
-             (provide-simple-mod
+             (provide-mod
                :fuel-upgrade#mod
                :fuel#uses
                :restore-amount
@@ -469,7 +469,7 @@
      (declare-feature
        {:id :fuel-upgrade
         :! (on-state
-             (provide-simple-mod
+             (provide-scalar-mod
                :fuel-upgrade#mod
                :fuel#uses
                :restore-amount + 2))})
